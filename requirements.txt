@@ -1,0 +1,14 @@
+requests
+pandas
+numpy
+scikit-learn
+tensorflow
+hopsworks
+shap
+streamlit
+flask
+python-dotenv
+jupyter
+matplotlib
+seaborn
+# using python 3.11 becuase of the latest version of tensorflow and scikit-learn
