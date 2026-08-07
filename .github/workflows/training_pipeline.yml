@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * *'  # Every day at midnight
   workflow_dispatch:       # Manual trigger
 
+permissions:
+  contents: write
+  
 jobs:
   run-training-pipeline:
     runs-on: ubuntu-latest
