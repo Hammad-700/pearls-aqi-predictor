@@ -8,7 +8,12 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 
-st.write("KEY starts with:", st.secrets.get("SUPABASE_KEY", "NOT FOUND")[:15])
+st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="wide")
+
+# Debug
+key = st.secrets.get("SUPABASE_KEY", "NOT FOUND")
+st.sidebar.write("KEY length:", len(key))
+
 @st.cache_resource
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
@@ -150,39 +155,29 @@ for col, f in zip([col1, col2, col3], forecast):
 # Chart
 st.subheader("Forecast + Recent History")
 fig = go.Figure()
-
 if history:
     hist_df = pd.DataFrame(history)
     hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
     hist_df = hist_df.sort_values("timestamp")
     fig.add_trace(go.Scatter(
         x=hist_df["timestamp"], y=hist_df["aqi"],
-        name="Historical AQI",
-        line=dict(color="#1f77b4", width=2)
+        name="Historical AQI", line=dict(color="#1f77b4", width=2)
     ))
-
 forecast_dates = [f["date"] for f in forecast]
 forecast_aqi = [f["aqi"] for f in forecast]
 fig.add_trace(go.Scatter(
     x=forecast_dates, y=forecast_aqi,
     name="Forecast AQI",
     line=dict(color="#ff4b4b", dash="dash", width=2),
-    mode="lines+markers",
-    marker=dict(size=10)
+    mode="lines+markers", marker=dict(size=10)
 ))
-
-# AQI threshold lines
 fig.add_hline(y=100, line_dash="dot", line_color="yellow", annotation_text="Moderate")
 fig.add_hline(y=150, line_dash="dot", line_color="orange", annotation_text="Sensitive")
 fig.add_hline(y=200, line_dash="dot", line_color="red", annotation_text="Unhealthy")
-
 fig.update_layout(
     title=f"AQI Forecast for {city.title()}",
-    xaxis_title="Date",
-    yaxis_title="AQI",
-    hovermode="x unified",
-    plot_bgcolor="rgba(0,0,0,0)",
-    height=400
+    xaxis_title="Date", yaxis_title="AQI",
+    hovermode="x unified", plot_bgcolor="rgba(0,0,0,0)", height=400
 )
 st.plotly_chart(fig, use_container_width=True)
 
@@ -195,18 +190,11 @@ importance_data = {
 }
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
-    x=imp_df["Importance"],
-    y=imp_df["Feature"],
-    orientation='h',
-    marker_color="#ff4b4b"
+    x=imp_df["Importance"], y=imp_df["Feature"],
+    orientation='h', marker_color="#ff4b4b"
 ))
-fig2.update_layout(
-    title="Feature Importance (SHAP values)",
-    height=300,
-    plot_bgcolor="rgba(0,0,0,0)"
-)
+fig2.update_layout(title="Feature Importance (SHAP values)", height=300, plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig2, use_container_width=True)
 
-# Footer
 st.markdown("---")
 st.caption("Pearls AQI Predictor | Data: AQICN API | Model: Ridge Regression | Store: Supabase")
