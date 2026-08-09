@@ -19,6 +19,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Debug secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          echo "URL length: ${#SUPABASE_URL}"
+          echo "URL starts with: ${SUPABASE_URL:0:8}"
+
       - name: Run feature pipeline
         env:
           AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
