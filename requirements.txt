@@ -12,5 +12,5 @@ python-dotenv
 requests
 streamlit
 plotly
-pytestg
+pytest
 gunicorn
