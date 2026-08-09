@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "requirements": "requirements-flask.txt"
+      }
     }
   ],
   "routes": [
