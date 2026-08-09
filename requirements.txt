@@ -6,7 +6,7 @@ pandas
 joblib
 flask
 flask-cors
-supabase
+supabase==2.31.0
 python-dotenv
 requests
 streamlit
