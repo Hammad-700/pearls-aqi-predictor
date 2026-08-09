@@ -40,7 +40,9 @@ def load_model():
             le = joblib.load(encoder_path)
         return model, le, version
     except Exception as e:
+        import traceback
         st.error(f"Model load error: {e}")
+        st.code(traceback.format_exc())
         return None, None, None
 
 def get_alert(aqi):
