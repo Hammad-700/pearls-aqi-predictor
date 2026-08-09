@@ -22,7 +22,9 @@ def get_supabase():
 def load_model():
     sb = get_supabase()
     try:
+        st.write("Checking model registry...")
         reg = sb.table("model_registry").select("*").order("trained_at", desc=True).limit(1).execute()
+        st.write("Registry rows:", len(reg.data))
         if not reg.data:
             return None, None, None
         meta = reg.data[0]
