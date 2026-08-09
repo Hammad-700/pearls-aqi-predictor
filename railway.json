@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "gunicorn api.app:app",
+    "healthcheckPath": "/health"
+  }
+}
