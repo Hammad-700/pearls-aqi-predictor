@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 *.joblib
 .DS_Store
+
+dashboard/.streamlit/secrets.toml
