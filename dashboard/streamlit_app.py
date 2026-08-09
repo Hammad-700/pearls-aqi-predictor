@@ -8,8 +8,7 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="wide")
-
+st.write("KEY starts with:", st.secrets.get("SUPABASE_KEY", "NOT FOUND")[:15])
 @st.cache_resource
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
