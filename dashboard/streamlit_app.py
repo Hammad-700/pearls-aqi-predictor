@@ -10,10 +10,6 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="wide")
 
-# Debug
-key = st.secrets.get("SUPABASE_KEY", "NOT FOUND")
-st.sidebar.write("KEY length:", len(key))
-
 @st.cache_resource
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
@@ -22,9 +18,7 @@ def get_supabase():
 def load_model():
     sb = get_supabase()
     try:
-        st.write("Checking model registry...")
         reg = sb.table("model_registry").select("*").order("trained_at", desc=True).limit(1).execute()
-        st.write("Registry rows:", len(reg.data))
         if not reg.data:
             return None, None, None
         meta = reg.data[0]
@@ -42,9 +36,7 @@ def load_model():
             le = joblib.load(encoder_path)
         return model, le, version
     except Exception as e:
-        import traceback
         st.error(f"Model load error: {e}")
-        st.code(traceback.format_exc())
         return None, None, None
 
 def get_alert(aqi):
@@ -97,17 +89,14 @@ def get_history(city):
         .order("timestamp", desc=True).limit(24).execute()
     return result.data
 
-# Header
 st.title("Pearls AQI Predictor")
 st.caption("3-day Air Quality Index forecast powered by Machine Learning")
 
-# Load model
 model, le, version = load_model()
 if model is None:
     st.error("Model not loaded!")
     st.stop()
 
-# Sidebar
 with st.sidebar:
     st.header("Settings")
     cities = list(le.classes_)
@@ -122,7 +111,6 @@ with st.sidebar:
     st.markdown("🟣 201-300: Very Unhealthy")
     st.markdown("🔴 301+: Hazardous")
 
-# Predict
 with st.spinner(f"Fetching forecast for {city}..."):
     forecast, as_of = predict(city, model, le)
     history = get_history(city)
@@ -133,7 +121,6 @@ if forecast is None:
 
 st.caption(f"Forecast as of: {as_of}")
 
-# Alert banner
 max_aqi = max(f["aqi"] for f in forecast)
 alert_label, alert_color = get_alert(max_aqi)
 st.markdown(
@@ -144,8 +131,6 @@ st.markdown(
 )
 
 st.markdown("---")
-
-# Metric cards
 st.subheader(f"3-Day Forecast for {city.title()}")
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
@@ -156,7 +141,6 @@ for col, f in zip([col1, col2, col3], forecast):
         delta=label
     )
 
-# Chart
 st.subheader("Forecast + Recent History")
 fig = go.Figure()
 if history:
@@ -185,7 +169,6 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-# Feature importance
 st.markdown("---")
 st.subheader("What drives AQI predictions?")
 importance_data = {
