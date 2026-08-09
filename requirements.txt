@@ -1,0 +1,15 @@
+scikit-learn
+xgboost
+lightgbm
+numpy
+pandas
+joblib
+shap
+flask
+flask-cors
+supabase
+python-dotenv
+requests
+streamlit
+plotly
+pytest
