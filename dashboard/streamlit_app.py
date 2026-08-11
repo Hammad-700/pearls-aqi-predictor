@@ -19,6 +19,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 @st.cache_resource
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
@@ -103,7 +104,10 @@ def spacer():
 
 # Header
 st.title("🌍 Pearls AQI Predictor")
-st.caption("3-day Air Quality Index forecast powered by Machine Learning")
+st.markdown("""
+**Know Your Air. Plan Ahead.**  
+*3-day AQI forecasting.*
+""")
 
 # Load model
 model, le, version = load_model()
@@ -135,17 +139,15 @@ if forecast is None:
     st.error(f"No data found for {city}")
     st.stop()
 
-st.caption(f"Forecast as of: {as_of}")
+today = datetime.now().strftime("%B %d, %Y")
+
+st.markdown(
+    f"<h2>Forecast as of: {today}</h2>",
+    unsafe_allow_html=True
+)
 
 # Alert banner
 max_aqi = max(f["aqi"] for f in forecast)
-alert_label, alert_color = get_alert(max_aqi)
-st.markdown(
-    f'<div style="background-color:{alert_color};padding:14px 20px;border-radius:10px;'
-    f'color:white;font-size:17px;font-weight:600;margin:10px 0 30px 0;">'
-    f'🌤️ AQI today is {max_aqi} — {alert_label}</div>',
-    unsafe_allow_html=True
-)
 
 # Section 1 — Forecast cards
 st.markdown("---")
