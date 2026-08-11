@@ -107,7 +107,7 @@ st.title("Pearls AQI Predictor 🇵🇰/🇬🇧")
 
 st.markdown("""
 <span style="color:#1f77b4; font-size:1.3rem; font-weight:700;">Know Your Air.</span>
-<span style="color:#00c853; font-size:1.3rem; font-weight:700;"> Plan Ahead.</span><br>
+<span style="color:#1f77b3; font-size:1.3rem; font-weight:700;"> Plan Ahead.</span><br>
 *3-day AQI forecasting.*
 """, unsafe_allow_html=True)
 
