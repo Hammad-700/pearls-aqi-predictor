@@ -66,14 +66,12 @@ def run_pipeline(city: str):
         print(f"[WARN] Not enough data for Gold yet — need 2+ rows")
         return
     try:
+        from datetime import datetime, timezone
         gold_filtered = {k: v for k, v in gold_row.items() if k in GOLD_COLS}
+        gold_filtered["timestamp"] = datetime.now(timezone.utc).isoformat()
         supabase.table("aqi_gold_features").upsert(
             gold_filtered, on_conflict="city,timestamp"
         ).execute()
         print(f"[OK] Gold saved")
     except Exception as e:
         print(f"[ERROR] Gold save failed: {e}")
-
-if __name__ == "__main__":
-    city = sys.argv[1] if len(sys.argv) > 1 else "lahore"
-    run_pipeline(city)
