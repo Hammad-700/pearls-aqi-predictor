@@ -103,7 +103,7 @@ def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
 
 # Header
-st.title("🌍 Pearls AQI Predictor 🇵🇰/🇬🇧")
+st.title(" Pearls AQI Predictor  🇵🇰/🇬🇧")
 st.markdown("""
 **Know Your Air. Plan Ahead.**  
 *3-day AQI forecasting.*
