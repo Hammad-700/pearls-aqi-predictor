@@ -86,7 +86,7 @@ def get_history(city):
     sb = get_supabase()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
-        .order("timestamp", desc=True).limit(24).execute()
+        .order("timestamp", desc=True).limit(200).execute()
     return result.data
 
 st.title("Pearls AQI Predictor")
