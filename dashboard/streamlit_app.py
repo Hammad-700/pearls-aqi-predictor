@@ -8,7 +8,7 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰,🇬🇧", page_icon="🌍", layout="wide")
 st.markdown("""
 <style>
 .block-container {
