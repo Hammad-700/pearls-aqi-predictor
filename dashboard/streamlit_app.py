@@ -143,7 +143,7 @@ alert_label, alert_color = get_alert(max_aqi)
 st.markdown(
     f'<div style="background-color:{alert_color};padding:14px 20px;border-radius:10px;'
     f'color:white;font-size:17px;font-weight:600;margin:10px 0 30px 0;">'
-    f'Air Quality Alert: {alert_label} — Max forecast AQI: {max_aqi}</div>',
+    f'🌤️ Air is {alert_label} — Highest predicted AQI over next 3 days is {max_aqi}</div>',
     unsafe_allow_html=True
 )
 
