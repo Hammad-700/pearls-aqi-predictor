@@ -192,7 +192,7 @@ fig.update_layout(
     height=420,
     margin=dict(t=40, b=40)
 )
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 spacer()
 
@@ -216,7 +216,7 @@ fig2.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     margin=dict(t=40, b=40)
 )
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
 spacer()
 
