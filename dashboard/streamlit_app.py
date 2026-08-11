@@ -40,11 +40,11 @@ def load_model():
         return None, None, None
 
 def get_alert(aqi):
-    if aqi <= 50: return "Good", "#00e400"
-    elif aqi <= 100: return "Moderate", "#ffff00"
-    elif aqi <= 150: return "Unhealthy for Sensitive Groups", "#ff7e00"
-    elif aqi <= 200: return "Unhealthy", "#ff0000"
-    elif aqi <= 300: return "Very Unhealthy", "#8f3f97"
+    if aqi <= 50: return "Good", "#00c853"
+    elif aqi <= 100: return "Moderate", "#ffd600"
+    elif aqi <= 150: return "Unhealthy for Sensitive Groups", "#ff6d00"
+    elif aqi <= 200: return "Unhealthy", "#d50000"
+    elif aqi <= 300: return "Very Unhealthy", "#6a1b9a"
     else: return "Hazardous", "#7e0023"
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
@@ -89,14 +89,20 @@ def get_history(city):
         .order("timestamp", desc=True).limit(200).execute()
     return result.data
 
-st.title("Pearls AQI Predictor")
+def spacer():
+    st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
+
+# Header
+st.title("🌍 Pearls AQI Predictor")
 st.caption("3-day Air Quality Index forecast powered by Machine Learning")
 
+# Load model
 model, le, version = load_model()
 if model is None:
     st.error("Model not loaded!")
     st.stop()
 
+# Sidebar
 with st.sidebar:
     st.header("Settings")
     cities = list(le.classes_)
@@ -111,6 +117,7 @@ with st.sidebar:
     st.markdown("🟣 201-300: Very Unhealthy")
     st.markdown("🔴 301+: Hazardous")
 
+# Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
     forecast, as_of = predict(city, model, le)
     history = get_history(city)
@@ -121,31 +128,42 @@ if forecast is None:
 
 st.caption(f"Forecast as of: {as_of}")
 
+# Alert banner
 max_aqi = max(f["aqi"] for f in forecast)
 alert_label, alert_color = get_alert(max_aqi)
 st.markdown(
-    f'<div style="background-color:{alert_color};padding:12px;border-radius:8px;'
-    f'color:black;font-size:16px;margin-bottom:10px;">'
-    f'<b>Air Quality Alert: {alert_label}</b> — Max forecast AQI: {max_aqi}</div>',
+    f'<div style="background-color:{alert_color};padding:14px 20px;border-radius:10px;'
+    f'color:white;font-size:17px;font-weight:600;margin:10px 0 30px 0;">'
+    f'Air Quality Alert: {alert_label} — Max forecast AQI: {max_aqi}</div>',
     unsafe_allow_html=True
 )
 
+# Section 1 — Forecast cards
 st.markdown("---")
 st.subheader(f"3-Day Forecast for {city.title()}")
+st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
+
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
-    <div style="border:2px solid {color};border-radius:12px;padding:20px;text-align:center;margin:4px">
-        <div style="font-size:14px;color:gray;margin-bottom:6px">📅 {f['date']}</div>
-        <div style="font-size:42px;font-weight:700;color:{color}">{f['aqi']}</div>
-        <div style="font-size:13px;color:gray;margin-top:4px">AQI Index</div>
-        <div style="margin-top:10px;padding:6px;border-radius:8px;background:{color}22;
-            color:{color};font-size:14px;font-weight:600">{label}</div>
+    <div style="border:2px solid {color};border-radius:14px;padding:24px;
+        text-align:center;margin:4px;min-height:160px">
+        <div style="font-size:15px;color:gray;margin-bottom:10px">📅 {f['date']}</div>
+        <div style="font-size:48px;font-weight:700;color:{color};line-height:1">{f['aqi']}</div>
+        <div style="font-size:12px;color:gray;margin:6px 0">AQI Index</div>
+        <div style="margin-top:12px;padding:7px;border-radius:8px;
+            background:{color}22;color:{color};font-size:13px;font-weight:600">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
+spacer()
+
+# Section 2 — Chart
+st.markdown("---")
 st.subheader("Forecast + Recent History")
+st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
+
 fig = go.Figure()
 if history:
     hist_df = pd.DataFrame(history)
@@ -163,18 +181,26 @@ fig.add_trace(go.Scatter(
     line=dict(color="#ff4b4b", dash="dash", width=2),
     mode="lines+markers", marker=dict(size=10)
 ))
-fig.add_hline(y=100, line_dash="dot", line_color="yellow", annotation_text="Moderate")
+fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
 fig.add_hline(y=150, line_dash="dot", line_color="orange", annotation_text="Sensitive")
 fig.add_hline(y=200, line_dash="dot", line_color="red", annotation_text="Unhealthy")
 fig.update_layout(
     title=f"AQI Forecast for {city.title()}",
     xaxis_title="Date", yaxis_title="AQI",
-    hovermode="x unified", plot_bgcolor="rgba(0,0,0,0)", height=400
+    hovermode="x unified",
+    plot_bgcolor="rgba(0,0,0,0)",
+    height=420,
+    margin=dict(t=40, b=40)
 )
 st.plotly_chart(fig, use_container_width=True)
 
+spacer()
+
+# Section 3 — SHAP
 st.markdown("---")
 st.subheader("What drives AQI predictions?")
+st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
+
 importance_data = {
     "Feature": FEATURE_COLS,
     "Importance": [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
@@ -182,10 +208,18 @@ importance_data = {
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
     x=imp_df["Importance"], y=imp_df["Feature"],
-    orientation='h', marker_color="#ff4b4b"
+    orientation='h', marker_color="#1f77b4"
 ))
-fig2.update_layout(title="Feature Importance (SHAP values)", height=300, plot_bgcolor="rgba(0,0,0,0)")
+fig2.update_layout(
+    title="Feature Importance (SHAP values)",
+    height=320,
+    plot_bgcolor="rgba(0,0,0,0)",
+    margin=dict(t=40, b=40)
+)
 st.plotly_chart(fig2, use_container_width=True)
 
+spacer()
+
+# Footer
 st.markdown("---")
 st.caption("Pearls AQI Predictor | Data: AQICN API | Model: Ridge Regression | Store: Supabase")
