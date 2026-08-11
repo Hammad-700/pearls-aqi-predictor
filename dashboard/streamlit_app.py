@@ -110,7 +110,7 @@ st.markdown("""
 **Know Your Air. Plan Ahead.**
 </span>  
 *3-day AQI forecasting.*
-""", unsafe_allow_html=True)
+""",)
 
 # Load model
 model, le, version = load_model()
