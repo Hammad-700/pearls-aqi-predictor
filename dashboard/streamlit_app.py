@@ -134,12 +134,16 @@ st.markdown("---")
 st.subheader(f"3-Day Forecast for {city.title()}")
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
-    label, _ = get_alert(f["aqi"])
-    col.metric(
-        label=f"Day {f['day']} — {f['date']}",
-        value=f"AQI {f['aqi']}",
-        delta=label
-    )
+    label, color = get_alert(f["aqi"])
+    col.markdown(f"""
+    <div style="border:2px solid {color};border-radius:12px;padding:20px;text-align:center;margin:4px">
+        <div style="font-size:14px;color:gray;margin-bottom:6px">📅 {f['date']}</div>
+        <div style="font-size:42px;font-weight:700;color:{color}">{f['aqi']}</div>
+        <div style="font-size:13px;color:gray;margin-top:4px">AQI Index</div>
+        <div style="margin-top:10px;padding:6px;border-radius:8px;background:{color}22;
+            color:{color};font-size:14px;font-weight:600">{label}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.subheader("Forecast + Recent History")
 fig = go.Figure()
