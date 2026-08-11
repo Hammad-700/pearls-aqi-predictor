@@ -8,7 +8,16 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="centered")
+st.set_page_config(page_title="Pearls AQI Predictor", page_icon="🌍", layout="wide")
+st.markdown("""
+<style>
+.block-container {
+    max-width: 1100px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 @st.cache_resource
 def get_supabase():
@@ -149,7 +158,7 @@ for col, f in zip([col1, col2, col3], forecast):
     col.markdown(f"""
     <div style="border:2px solid {color};border-radius:14px;padding:24px;
         text-align:center;margin:4px;min-height:160px">
-        <div style="font-size:15px;color:gray;margin-bottom:10px">📅 {f['date']}</div>
+        <div style="font-size:18px;font-weight:700;color:gray;margin-bottom:10px">{f['date']}</div>
         <div style="font-size:48px;font-weight:700;color:{color};line-height:1">{f['aqi']}</div>
         <div style="font-size:12px;color:gray;margin:6px 0">AQI Index</div>
         <div style="margin-top:12px;padding:7px;border-radius:8px;
