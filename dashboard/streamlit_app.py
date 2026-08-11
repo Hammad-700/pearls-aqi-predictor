@@ -8,7 +8,7 @@ import numpy as np
 import os
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰,🇬🇧", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰/🇬🇧", page_icon="🌍", layout="wide")
 st.markdown("""
 <style>
 .block-container {
@@ -103,7 +103,7 @@ def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
 
 # Header
-st.title("🌍 Pearls AQI Predictor")
+st.title("🌍 Pearls AQI Predictor 🇵🇰/🇬🇧")
 st.markdown("""
 **Know Your Air. Plan Ahead.**  
 *3-day AQI forecasting.*
