@@ -103,11 +103,14 @@ def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
 
 # Header
-st.title(" Pearls AQI Predictor  🇵🇰/🇬🇧")
+st.title("Pearls AQI Predictor 🇵🇰/🇬🇧")
+
 st.markdown("""
-**Know Your Air. Plan Ahead.**  
+<span style="color:#1f77b4; font-size:1.25rem; font-weight:600;">
+**Know Your Air. Plan Ahead.**
+</span>  
 *3-day AQI forecasting.*
-""")
+""", unsafe_allow_html=True)
 
 # Load model
 model, le, version = load_model()
