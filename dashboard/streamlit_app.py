@@ -90,7 +90,7 @@ def predict(city, model, le):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    return forecast, row["timestamp"]
+    return forecast, row["timestamp"], row.get("aqi", 0)
 
 def get_history(city):
     sb = get_supabase()
@@ -134,7 +134,7 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of = predict(city, model, le)
+    forecast, as_of , current_aqi = predict(city, model, le)
     history = get_history(city)
 
 if forecast is None:
@@ -152,7 +152,7 @@ st.markdown(
 
 # Alert banner
 max_aqi = max(f["aqi"] for f in forecast)
-alert_label, alert_color = get_alert(max_aqi)
+alert_label, alert_color = get_alert(current_aqi)
 st.markdown(
     f'<div style="background-color:{alert_color};padding:14px 20px;border-radius:10px;'
     f'color:black;font-size:17px;font-weight:600;margin:10px 0 30px 0;">'
