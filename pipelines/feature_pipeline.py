@@ -75,3 +75,7 @@ def run_pipeline(city: str):
         print(f"[OK] Gold saved")
     except Exception as e:
         print(f"[ERROR] Gold save failed: {e}")
+
+if __name__ == "__main__":
+    city = sys.argv[1] if len(sys.argv) > 1 else "lahore"
+    run_pipeline(city)

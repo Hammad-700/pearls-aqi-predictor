@@ -20,8 +20,7 @@ GOLD_COLS = ["city", "timestamp", "aqi", "hour", "day_of_week",
              "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"]
 
 CITY_MAP = {
-    "lahore": "@A471607",
-    "london": "london"
+    "lahore": "@A471607"
 }
 
 def fetch_with_backoff(city: str, retries=3, delay=5) -> dict:

@@ -8,8 +8,7 @@ load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
 CITY_MAP = {
-    "lahore": "@A471607",
-    "london": "london"
+    "lahore": "@A471607"
 }
 
 def fetch_aqi(city: str) -> dict:
