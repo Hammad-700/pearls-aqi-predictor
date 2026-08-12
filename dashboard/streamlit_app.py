@@ -6,7 +6,7 @@ import joblib
 import tempfile
 import numpy as np
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰/🇬🇧", page_icon="🌍", layout="wide")
 st.markdown("""
