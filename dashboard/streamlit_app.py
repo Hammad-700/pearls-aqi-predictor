@@ -244,4 +244,4 @@ spacer()
 
 # Footer
 st.markdown("---")
-st.caption("Pearls AQI Predictor | Data: AQICN API | Model: Ridge Regression | Store: Supabase")
+st.caption("Pearls AQI Predictor | Data: AQICN API | Model: Ridge Regression - Random Forest - XGBoost - LightGBM | Store: Supabase")
