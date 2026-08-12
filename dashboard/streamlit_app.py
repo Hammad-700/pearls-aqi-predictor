@@ -120,8 +120,8 @@ if model is None:
 # Sidebar
 with st.sidebar:
     st.header("Settings")
-    cities = list(le.classes_)
-    city = st.selectbox("Select City", cities)
+    city = "lahore"
+    st.info("📍 Lahore, Pakistan")
     st.caption(f"Model: `{version}`")
     st.markdown("---")
     st.markdown("**EPA AQI Scale:**")
