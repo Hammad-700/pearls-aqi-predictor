@@ -19,8 +19,14 @@ GOLD_COLS = ["city", "timestamp", "aqi", "hour", "day_of_week",
              "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
              "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"]
 
+CITY_MAP = {
+    "lahore": "@A471607",
+    "london": "london"
+}
+
 def fetch_with_backoff(city: str, retries=3, delay=5) -> dict:
-    url = f"https://api.waqi.info/feed/{city}/?token={TOKEN}"
+    station = CITY_MAP.get(city.lower(), city)
+    url = f"https://api.waqi.info/feed/{station}/?token={TOKEN}"
     for attempt in range(retries):
         try:
             resp = requests.get(url, timeout=10)

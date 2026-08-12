@@ -7,8 +7,14 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
+CITY_MAP = {
+    "lahore": "@A471607",
+    "london": "london"
+}
+
 def fetch_aqi(city: str) -> dict:
-    url = f"https://api.waqi.info/feed/{city}/?token={TOKEN}"
+    station = CITY_MAP.get(city.lower(), city)
+    url = f"https://api.waqi.info/feed/{station}/?token={TOKEN}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -18,7 +24,6 @@ def fetch_aqi(city: str) -> dict:
             print(f"[ERROR] API returned status: {data['status']}")
             return None
 
-        # Bronze layer — raw, untouched, just add city + timestamp
         bronze_row = {
             "city": city,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -32,7 +37,6 @@ def fetch_aqi(city: str) -> dict:
         print(f"[ERROR] Request failed for {city}: {e}")
         return None
 
-# Test
 if __name__ == "__main__":
     city = input("Enter city name: ")
     result = fetch_aqi(city)
