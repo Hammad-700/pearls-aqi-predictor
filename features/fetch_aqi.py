@@ -8,7 +8,12 @@ load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
 def fetch_aqi(city: str) -> dict:
-    url = f"https://api.waqi.info/feed/{city}/?token={TOKEN}"
+    city_map = {
+    "lahore": "A471607",
+    "london": "london"
+}
+    station = city_map.get(city.lower(), city)
+    url = f"https://api.waqi.info/feed/{station}/?token={TOKEN}"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
