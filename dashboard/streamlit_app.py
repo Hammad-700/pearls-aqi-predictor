@@ -141,7 +141,9 @@ if forecast is None:
     st.error(f"No data found for {city}")
     st.stop()
 
-today = datetime.now(timezone.utc).strftime("%B %d, %Y")
+from datetime import timezone, timedelta
+pkt = timezone(timedelta(hours=5))
+today = datetime.now(pkt).strftime("%B %d, %Y")
 
 st.markdown(
     f"<h2>Forecast as of: {today}</h2>",
