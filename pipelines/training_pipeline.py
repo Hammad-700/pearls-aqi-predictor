@@ -92,7 +92,7 @@ def get_models():
     models = {
         "ridge": MultiOutputRegressor(Ridge()),
         "random_forest": MultiOutputRegressor(
-            RandomForestRegressor(n_estimators=100, random_state=42)
+            RandomForestRegressor(n_estimators=30, max_depth=6, random_state=42)
         ),
     }
     if XGB_OK:
