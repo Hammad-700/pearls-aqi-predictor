@@ -4,11 +4,13 @@ lightgbm
 numpy
 pandas
 joblib
+shap
 flask
 flask-cors
-supabase==2.31.0
+supabase
 python-dotenv
 requests
 streamlit
 plotly
+pytest
 gunicorn
