@@ -41,9 +41,11 @@ def build_gold_features(silver_rows: list) -> dict:
     df = df.sort_values("timestamp").reset_index(drop=True)
     latest = df.iloc[-1].copy()
     ts = latest["timestamp"]
-    latest["hour"] = ts.hour
-    latest["day_of_week"] = ts.dayofweek
-    latest["month"] = ts.month
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    latest["hour"] = now.hour
+    latest["day_of_week"] = now.weekday()
+    latest["month"] = now.month
     latest["aqi_lag_1h"] = df.iloc[-2]["aqi"] if len(df) >= 2 else None
     before_24 = df[df["timestamp"] <= ts - pd.Timedelta(hours=24)]
     latest["aqi_lag_24h"] = float(before_24.iloc[-1]["aqi"]) if len(before_24) > 0 else None
