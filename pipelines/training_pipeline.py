@@ -180,9 +180,35 @@ def run_training():
     champion = results[champion_name]
     print(f"\n[CHAMPION] {champion_name} avg RMSE: {champion['metrics']['avg_rmse']:.2f}")
 
-    version = f"v{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
-    save_champion(champion["model"], le, version, champion["metrics"], champion_name)
-    print(f"\n[DONE] Training complete! Version: {version}")
+    # Champion gate — only save if better than existing champion
+    try:
+        existing = supabase.table("model_registry")\
+            .select("metrics,version")\
+            .order("trained_at", desc=True)\
+            .limit(1).execute()
+        
+        if existing.data:
+            existing_rmse = existing.data[0]["metrics"].get("avg_rmse", 999)
+            new_rmse = champion["metrics"]["avg_rmse"]
+            print(f"\n[GATE] Existing RMSE: {existing_rmse:.2f} | New RMSE: {new_rmse:.2f}")
+            
+            if new_rmse < existing_rmse:
+                print(f"[GATE] New model is better — promoting to champion!")
+                version = f"v{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+                save_champion(champion["model"], le, version, champion["metrics"], champion_name)
+                print(f"\n[DONE] New champion saved! Version: {version}")
+            else:
+                print(f"[GATE] Existing model is better — keeping current champion!")
+                print(f"\n[DONE] Training complete — no champion update needed.")
+        else:
+            version = f"v{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+            save_champion(champion["model"], le, version, champion["metrics"], champion_name)
+            print(f"\n[DONE] First champion saved! Version: {version}")
+    except Exception as e:
+        print(f"[WARN] Champion gate failed: {e} — saving anyway")
+        version = f"v{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
+        save_champion(champion["model"], le, version, champion["metrics"], champion_name)
+        print(f"\n[DONE] Training complete! Version: {version}")
 
 
 if __name__ == "__main__":
