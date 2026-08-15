@@ -1,4 +1,7 @@
 import pandas as pd
+from datetime import timezone, timedelta
+
+PKT = timezone(timedelta(hours=5))
 
 def clean_to_silver(bronze_row: dict) -> dict:
     raw = bronze_row["raw_data"]
@@ -43,11 +46,14 @@ def build_gold_features(silver_rows: list) -> dict:
 
     latest = df.iloc[-1].copy()
     ts = latest["timestamp"]
+    
+    # Convert to PKT for calendar features (Pakistan timezone)
+    ts_pkt = ts.to_pydatetime().astimezone(PKT)
 
-    # Calendar features (same as before)
-    latest["hour"] = ts.hour
-    latest["day_of_week"] = ts.dayofweek
-    latest["month"] = ts.month
+    # Calendar features (in PKT time)
+    latest["hour"] = ts_pkt.hour
+    latest["day_of_week"] = ts_pkt.weekday()
+    latest["month"] = ts_pkt.month
 
     # Lag 1h
     latest["aqi_lag_1h"] = df.iloc[-2]["aqi"] if len(df) >= 2 else None
