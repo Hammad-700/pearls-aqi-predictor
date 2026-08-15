@@ -137,9 +137,12 @@ with st.spinner(f"Fetching forecast for {city}..."):
     forecast, as_of, current_aqi = predict(city, model, le)
     history = get_history(city)
 
-if forecast is None:
-    st.error(f"No data found for {city}")
-    st.stop()
+# Staleness check
+from datetime import datetime, timezone, timedelta
+latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+age_hours = (datetime.now(timezone.utc) - latest_ts).total_seconds() / 3600
+if age_hours > 3:
+    st.warning(f"⚠️ Data is {int(age_hours)} hours old — station may not have updated yet.")
 
 from datetime import timezone, timedelta
 pkt = timezone(timedelta(hours=5))

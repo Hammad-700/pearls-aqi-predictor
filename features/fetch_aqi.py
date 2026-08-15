@@ -8,7 +8,7 @@ load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
 CITY_MAP = {
-    "lahore": "@A471607"
+    "lahore": "@A471607",
 }
 
 def fetch_aqi(city: str) -> dict:
@@ -23,13 +23,27 @@ def fetch_aqi(city: str) -> dict:
             print(f"[ERROR] API returned status: {data['status']}")
             return None
 
+        # Use station's own reading time (not fetch time)
+        station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
+        if station_time:
+            try:
+                reading_ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
+                # Convert to UTC
+                reading_ts = reading_ts.astimezone(timezone.utc)
+                timestamp = reading_ts.isoformat()
+            except:
+                timestamp = datetime.now(timezone.utc).isoformat()
+        else:
+            timestamp = datetime.now(timezone.utc).isoformat()
+
         bronze_row = {
             "city": city,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "raw_data": data["data"]
+            "timestamp": timestamp,
+            "raw_data": data["data"],
+            "fetch_time": datetime.now(timezone.utc).isoformat()
         }
 
-        print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']}")
+        print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']} (reading time: {timestamp[:16]})")
         return bronze_row
 
     except requests.exceptions.RequestException as e:
