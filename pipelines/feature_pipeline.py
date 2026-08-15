@@ -64,11 +64,12 @@ def run_pipeline(city: str):
         return
 
     # Get recent silver rows (most recent 30, oldest first for feature calc)
+    # Get recent silver rows (most recent 30, oldest first for feature calc)
     try:
         recent = supabase.table("aqi_silver_cleaned")\
             .select("*")\
             .eq("city", city)\
-            .order("timestamp", desc=False)\
+            .order("timestamp", desc=True)\
             .limit(30)\
             .execute()
         silver_rows = list(reversed(recent.data))
