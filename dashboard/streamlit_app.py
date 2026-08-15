@@ -193,10 +193,24 @@ fig = go.Figure()
 if history:
     hist_df = pd.DataFrame(history)
     hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
-    hist_df = hist_df.sort_values("timestamp")
+    hist_df = hist_df.sort_values("timestamp").reset_index(drop=True)
+    
+    # Add gap detection — insert None where gap > 3 hours
+    hist_df["gap"] = hist_df["timestamp"].diff() > pd.Timedelta(hours=3)
+    x_vals = []
+    y_vals = []
+    for i, row in hist_df.iterrows():
+        if row["gap"] and i > 0:
+            x_vals.append(None)
+            y_vals.append(None)
+        x_vals.append(row["timestamp"])
+        y_vals.append(row["aqi"])
+    
     fig.add_trace(go.Scatter(
-        x=hist_df["timestamp"], y=hist_df["aqi"],
-        name="Historical AQI", line=dict(color="#1f77b4", width=2)
+        x=x_vals, y=y_vals,
+        name="Historical AQI",
+        line=dict(color="#1f77b4", width=2),
+        connectgaps=False
     ))
 forecast_dates = [f["date"] for f in forecast]
 forecast_aqi = [f["aqi"] for f in forecast]
