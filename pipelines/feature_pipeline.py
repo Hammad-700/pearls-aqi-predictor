@@ -80,12 +80,10 @@ def run_pipeline(city: str):
         print(f"[ERROR] Fetching silver rows failed: {e}")
         return
 
-    # Gold
+        # Gold
     gold_row = build_gold_features(silver_rows)
 
     if not gold_row:
-        # Not enough history for lag/rolling features yet — but if aqi
-        # is available in silver, push a partial row instead of skipping.
         if silver_row.get("aqi") is None:
             print(f"[WARN] No aqi in silver row — skipping Gold")
             return
@@ -109,16 +107,18 @@ def run_pipeline(city: str):
 
     try:
         gold_filtered = {k: v for k, v in gold_row.items() if k in GOLD_COLS}
-        # use the real reading time, not now()
+        
+        # Force using the silver timestamp
         gold_filtered["timestamp"] = silver_row["timestamp"]
-        supabase.table("aqi_gold_features").upsert(
+        
+        print(f"[DEBUG] Saving Gold → timestamp={gold_filtered['timestamp']} | aqi={gold_filtered['aqi']}")
+        
+        result = supabase.table("aqi_gold_features").upsert(
             gold_filtered, on_conflict="city,timestamp"
         ).execute()
-        print(f"[OK] Gold saved")
+        
+        print(f"[OK] Gold saved (rows affected: {len(result.data) if result.data else 'unknown'})")
+        
     except Exception as e:
         print(f"[ERROR] Gold save failed: {e}")
-
-
-if __name__ == "__main__":
-    city = sys.argv[1] if len(sys.argv) > 1 else "lahore"
-    run_pipeline(city)
+        raise   # Important: make the job fail so you get the alert
