@@ -63,15 +63,15 @@ def run_pipeline(city: str):
         print(f"[ERROR] Silver save failed: {e}")
         return
 
-    # Get recent silver rows
+    # Get recent silver rows (most recent 30, oldest first for feature calc)
     try:
         recent = supabase.table("aqi_silver_cleaned")\
             .select("*")\
             .eq("city", city)\
-            .order("timestamp", desc=False)\
+            .order("timestamp", desc=True)\
             .limit(30)\
             .execute()
-        silver_rows = recent.data
+        silver_rows = list(reversed(recent.data))
     except Exception as e:
         print(f"[ERROR] Fetching silver rows failed: {e}")
         return
