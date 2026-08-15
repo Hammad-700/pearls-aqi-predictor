@@ -99,7 +99,7 @@ def run_backfill(city: str, days: int = 30):
     print(f"[INFO] Current AQI: {current_aqi} — generating {days*24} hourly rows")
 
     import random
-    random.seed(42)
+    random.seed(55)
 
     # Generate synthetic hourly rows going back `days` days
     for hour_offset in range(days * 24, 0, -1):

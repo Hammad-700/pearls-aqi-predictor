@@ -36,25 +36,44 @@ def build_gold_features(silver_rows: list) -> dict:
     if len(silver_rows) < 2:
         print("[WARN] Not enough rows for lag features")
         return None
+
     df = pd.DataFrame(silver_rows)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601", utc=True)  # ← only change
     df = df.sort_values("timestamp").reset_index(drop=True)
+
     latest = df.iloc[-1].copy()
     ts = latest["timestamp"]
-    ts_utc = ts.tz_localize('UTC') if ts.tzinfo is None else ts.tz_convert('UTC')
-    latest["hour"] = ts_utc.hour
-    latest["day_of_week"] = ts_utc.dayofweek
-    latest["month"] = ts_utc.month
+
+    # Calendar features (same as before)
+    latest["hour"] = ts.hour
+    latest["day_of_week"] = ts.dayofweek
+    latest["month"] = ts.month
+
+    # Lag 1h
     latest["aqi_lag_1h"] = df.iloc[-2]["aqi"] if len(df) >= 2 else None
+
+    # Lag 24h
     before_24 = df[df["timestamp"] <= ts - pd.Timedelta(hours=24)]
     latest["aqi_lag_24h"] = float(before_24.iloc[-1]["aqi"]) if len(before_24) > 0 else None
+
+    # Rolling mean 24h
     last_24 = df[df["timestamp"] > ts - pd.Timedelta(hours=24)]["aqi"]
     latest["aqi_roll_mean_24h"] = float(last_24.mean()) if len(last_24) > 0 else None
+
+    # Change rate
     prev_aqi = df.iloc[-2]["aqi"]
     latest["aqi_change_rate"] = float(latest["aqi"] - prev_aqi) if prev_aqi else None
+
+    # Placeholders
     latest["aqi_d1"] = None
     latest["aqi_d2"] = None
     latest["aqi_d3"] = None
+
     gold_row = latest.to_dict()
-    gold_row["timestamp"] = ts.isoformat()
+    gold_row["timestamp"] = ts.isoformat().replace("+00:00", "Z")  # ← only change
+
+    # Temporary debug (remove later if you want)
+    print(f"[GOLD DEBUG] aqi={gold_row['aqi']} | lag1={gold_row['aqi_lag_1h']} | "
+          f"lag24={gold_row['aqi_lag_24h']} | roll24={gold_row['aqi_roll_mean_24h']}")
+
     return gold_row
