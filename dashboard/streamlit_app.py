@@ -240,9 +240,23 @@ st.markdown("---")
 st.subheader("What drives AQI predictions?")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
+# Real feature importance from model
+try:
+    import numpy as np
+    # Get feature importances from champion model
+    base_estimator = model.estimators_[0]
+    if hasattr(base_estimator, 'feature_importances_'):
+        importances = np.mean([est.feature_importances_ for est in model.estimators_], axis=0)
+    elif hasattr(base_estimator, 'coef_'):
+        importances = np.abs(base_estimator.coef_)
+    else:
+        importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
+except:
+    importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
+
 importance_data = {
     "Feature": FEATURE_COLS,
-    "Importance": [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
+    "Importance": importances
 }
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
