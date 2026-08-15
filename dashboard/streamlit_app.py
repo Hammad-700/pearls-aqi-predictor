@@ -8,7 +8,7 @@ import numpy as np
 import os
 from datetime import datetime, timedelta, timezone
 
-st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰/🇬🇧", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰", page_icon="🌍", layout="wide")
 st.markdown("""
 <style>
 .block-container {
@@ -278,4 +278,4 @@ spacer()
 
 # Footer
 st.markdown("---")
-st.caption("Pearls AQI Predictor | Data: AQICN API | Model: Ridge Regression - Random Forest - XGBoost - LightGBM | Store: Supabase")
+st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM | Store: Supabase")
