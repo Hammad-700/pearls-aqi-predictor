@@ -7,10 +7,11 @@ from supabase import create_client
 load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dashboard.streamlit_app import PKT
 from features.engineer_features import clean_to_silver, build_gold_features
 from features.fetch_aqi import fetch_aqi
 
+# Pakistan Time (do NOT import from streamlit_app)
+PKT = timezone(timedelta(hours=5))
 
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
