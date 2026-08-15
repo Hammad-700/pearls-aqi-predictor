@@ -192,7 +192,7 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 fig = go.Figure()
 if history:
     hist_df = pd.DataFrame(history)
-    hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
+    hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601")
     hist_df = hist_df.sort_values("timestamp").reset_index(drop=True)
     
     # Add gap detection — insert None where gap > 3 hours
