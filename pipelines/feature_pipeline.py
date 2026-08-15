@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from supabase import create_client
 
@@ -12,9 +13,11 @@ from features.fetch_aqi import fetch_aqi
 
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-GOLD_COLS = ["city", "timestamp", "aqi", "hour", "day_of_week",
-             "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-             "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"]
+GOLD_COLS = [
+    "city", "timestamp", "aqi", "hour", "day_of_week",
+    "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
+    "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"
+]
 
 
 def run_pipeline(city: str):
@@ -25,6 +28,7 @@ def run_pipeline(city: str):
     if not bronze_row:
         print(f"[ERROR] Fetch failed for {city}")
         return
+
     try:
         supabase.table("aqi_bronze_raw").upsert({
             "city": bronze_row["city"],
@@ -32,18 +36,17 @@ def run_pipeline(city: str):
             "raw_data": bronze_row["raw_data"]
         }, on_conflict="city,timestamp").execute()
         print(f"[OK] Bronze saved")
+
         # Staleness check
         try:
-            from datetime import datetime, timezone
             ts = datetime.fromisoformat(
-                bronze_row["timestamp"].replace("Z", "+00:00"))
-            age_hours = (datetime.now(timezone.utc) -
-                         ts).total_seconds() / 3600
+                bronze_row["timestamp"].replace("Z", "+00:00")
+            )
+            age_hours = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
             if age_hours > 6:
-                print(
-                    f"[WARN] Station data is {int(age_hours)}h old — may be stale!")
+                print(f"[WARN] Station data is {int(age_hours)}h old — may be stale!")
             else:
-                print(f"[OK] Station data is {int(age_hours*60)} minutes old")
+                print(f"[OK] Station data is {int(age_hours * 60)} minutes old")
         except Exception as e:
             print(f"[WARN] Staleness check failed: {e}")
     except Exception as e:
@@ -54,6 +57,7 @@ def run_pipeline(city: str):
     silver_row = clean_to_silver(bronze_row)
     if not silver_row:
         return
+
     try:
         supabase.table("aqi_silver_cleaned").upsert(
             silver_row, on_conflict="city,timestamp"
@@ -63,7 +67,6 @@ def run_pipeline(city: str):
         print(f"[ERROR] Silver save failed: {e}")
         return
 
-    # Get recent silver rows (most recent 30, oldest first for feature calc)
     # Get recent silver rows (most recent 30, oldest first for feature calc)
     try:
         recent = supabase.table("aqi_silver_cleaned")\
@@ -87,7 +90,6 @@ def run_pipeline(city: str):
             print(f"[WARN] No aqi in silver row — skipping Gold")
             return
         print(f"[WARN] Not enough history for full features — saving partial Gold row")
-        from datetime import datetime
         ts = datetime.fromisoformat(silver_row["timestamp"].replace("Z", "+00:00"))
         gold_row = {
             "city": silver_row["city"],
