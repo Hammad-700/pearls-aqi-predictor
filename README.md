@@ -41,7 +41,7 @@ Trained all 4 models on the same features with the same train/test split (last 2
 
 |      Model       | Avg RMSE |             
 |------------------|          |
-| Ridge Regression | 8.60     | ✅ Champion 
+| Ridge Regression | 8.60     | 
 | Random Forest    | 8.94     |             
 | LightGBM         | 9.50     |             
 | XGBoost          | 10.39    | 
@@ -111,9 +111,9 @@ Sample `/predict` response:
 {
   "city": "lahore",
   "forecast": [
-    {"day": 1, "date": "2026-08-11", "aqi": 35},
-    {"day": 2, "date": "2026-08-12", "aqi": 36},
-    {"day": 3, "date": "2026-08-13", "aqi": 33}
+    {"day": 1, "date": "2026-08-11", "aqi": 135},
+    {"day": 2, "date": "2026-08-12", "aqi": 146},
+    {"day": 3, "date": "2026-08-13", "aqi": 133}
   ],
   "max_aqi": 36,
   "alert_level": "Good"
@@ -150,7 +150,7 @@ pearls-aqi-predictor/
 ## Known limitations
 
 - Initial training used synthetic backfill, not real historical data. Accuracy will improve as real data accumulates.
-- Only Lahore and London supported right now.
+- Only Lahore supported right now.
 - Flask isn't publicly deployed — Python 3.14 isn't supported by free hosting platforms yet. Dashboard connects to Supabase directly as a workaround.
 
 
