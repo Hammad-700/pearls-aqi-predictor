@@ -25,3 +25,29 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python pipelines/training_pipeline.py
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          ALERT_PASSWORD: ${{ secrets.ALERT_PASSWORD }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+        run: |
+          python -c "
+          import smtplib, os
+          from email.mime.text import MIMEText
+          sender = os.getenv('ALERT_EMAIL')
+          password = os.getenv('ALERT_PASSWORD')
+          recipient = os.getenv('ALERT_TO')
+          if not all([sender, password, recipient]):
+              print('Email secrets not set - skipping alert')
+              exit(0)
+          msg = MIMEText('Training pipeline failed! Check GitHub Actions logs.')
+          msg['Subject'] = 'Pearls AQI - Training Failure Alert'
+          msg['From'] = sender
+          msg['To'] = recipient
+          with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+              s.login(sender, password)
+              s.sendmail(sender, recipient, msg.as_string())
+          print('Alert email sent!')
+          "
