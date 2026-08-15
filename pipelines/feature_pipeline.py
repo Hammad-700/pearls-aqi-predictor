@@ -1,12 +1,13 @@
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from supabase import create_client
 
 load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dashboard.streamlit_app import PKT
 from features.engineer_features import clean_to_silver, build_gold_features
 from features.fetch_aqi import fetch_aqi
 
@@ -80,30 +81,33 @@ def run_pipeline(city: str):
         print(f"[ERROR] Fetching silver rows failed: {e}")
         return
 
-        # Gold
+    # Gold
     gold_row = build_gold_features(silver_rows)
 
     if not gold_row:
         if silver_row.get("aqi") is None:
             print(f"[WARN] No aqi in silver row — skipping Gold")
             return
-        print(f"[WARN] Not enough history for full features — saving partial Gold row")
-        ts = datetime.fromisoformat(silver_row["timestamp"].replace("Z", "+00:00"))
-        gold_row = {
-            "city": silver_row["city"],
-            "timestamp": silver_row["timestamp"],
-            "aqi": silver_row["aqi"],
-            "hour": ts.hour,
-            "day_of_week": ts.weekday(),
-            "month": ts.month,
-            "aqi_lag_1h": None,
-            "aqi_lag_24h": None,
-            "aqi_roll_mean_24h": None,
-            "aqi_change_rate": None,
-            "aqi_d1": None,
-            "aqi_d2": None,
-            "aqi_d3": None,
-        }
+        else:
+            print(f"[WARN] Not enough history for full features — saving partial Gold row")
+            ts = datetime.fromisoformat(silver_row["timestamp"].replace("Z", "+00:00"))
+            ts_pkt = ts.astimezone(PKT)   # ← add this
+            
+            gold_row = {
+                "city": silver_row["city"],
+                "timestamp": silver_row["timestamp"],
+                "aqi": silver_row["aqi"],
+                "hour": ts_pkt.hour,                 # ← changed
+                "day_of_week": ts_pkt.weekday(),     # ← changed
+                "month": ts_pkt.month,               # ← changed
+                "aqi_lag_1h": None,
+                "aqi_lag_24h": None,
+                "aqi_roll_mean_24h": None,
+                "aqi_change_rate": None,
+                "aqi_d1": None,
+                "aqi_d2": None,
+                "aqi_d3": None,
+            }
 
     try:
         gold_filtered = {k: v for k, v in gold_row.items() if k in GOLD_COLS}

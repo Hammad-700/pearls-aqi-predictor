@@ -137,19 +137,22 @@ with st.spinner(f"Fetching forecast for {city}..."):
     forecast, as_of, current_aqi = predict(city, model, le)
     history = get_history(city)
 
-# Staleness check
+# Staleness check + Pakistan Time
 from datetime import datetime, timezone, timedelta
+
+PKT = timezone(timedelta(hours=5))
+
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
 age_hours = (datetime.now(timezone.utc) - latest_ts).total_seconds() / 3600
+
 if age_hours > 3:
     st.warning(f"⚠️ Data is {int(age_hours)} hours old — station may not have updated yet.")
 
-from datetime import timezone, timedelta
-pkt = timezone(timedelta(hours=5))
-today = datetime.now(pkt).strftime("%B %d, %Y")
+# Show date in Pakistan Time
+today_pkt = datetime.now(PKT).strftime("%B %d, %Y  •  %I:%M %p PKT")
 
 st.markdown(
-    f"<h2>Forecast as of: {today}</h2>",
+    f"<h2>Forecast as of: {today_pkt}</h2>",
     unsafe_allow_html=True
 )
 
@@ -192,8 +195,8 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 fig = go.Figure()
 if history:
     hist_df = pd.DataFrame(history)
-    hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601")
-    hist_df = hist_df.sort_values("timestamp").reset_index(drop=True)
+    hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
+    hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")  # ← PKT
     
     # Add gap detection — insert None where gap > 3 hours
     hist_df["gap"] = hist_df["timestamp"].diff() > pd.Timedelta(hours=3)
