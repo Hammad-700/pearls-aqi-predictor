@@ -30,9 +30,21 @@ def run_pipeline(city: str):
             "raw_data": bronze_row["raw_data"]
         }, on_conflict="city,timestamp").execute()
         print(f"[OK] Bronze saved")
+        # Staleness check
+        try:
+            from datetime import datetime, timezone
+            ts = datetime.fromisoformat(bronze_row["timestamp"].replace("Z", "+00:00"))
+            age_hours = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+            if age_hours > 6:
+                print(f"[WARN] Station data is {int(age_hours)}h old — may be stale!")
+            else:
+                print(f"[OK] Station data is {int(age_hours*60)} minutes old")
+        except Exception as e:
+            print(f"[WARN] Staleness check failed: {e}")
     except Exception as e:
         print(f"[ERROR] Bronze save failed: {e}")
         return
+
 
     # Silver
     silver_row = clean_to_silver(bronze_row)
