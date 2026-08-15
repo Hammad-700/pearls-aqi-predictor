@@ -40,7 +40,6 @@ def fetch_aqi(city: str) -> dict:
             "city": city,
             "timestamp": timestamp,
             "raw_data": data["data"],
-            "fetch_time": datetime.now(timezone.utc).isoformat()
         }
 
         print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']} (reading time: {timestamp[:16]})")
