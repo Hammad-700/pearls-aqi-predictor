@@ -51,7 +51,7 @@ def build_gold_from_rows(rows: list, idx: int) -> dict:
 
     import pandas as pd
     df = pd.DataFrame(rows[:idx+1])
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
     df = df.sort_values("timestamp").reset_index(drop=True)
 
     latest = df.iloc[-1].copy()
@@ -185,7 +185,7 @@ def run_backfill(city: str, days: int = 30):
     print(f"     Gold saved: {gold_saved}, skipped: {gold_skipped}")
 
 if __name__ == "__main__":
-    cities = sys.argv[1:] if len(sys.argv) > 1 else ["lahore", "london"]
+    cities = sys.argv[1:] if len(sys.argv) > 1 else ["lahore"]
     days = 30
     print(f"⚠️  This will generate {days*24} rows per city")
     print(f"Cities: {cities}")

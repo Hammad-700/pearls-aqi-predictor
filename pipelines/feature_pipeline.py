@@ -6,14 +6,16 @@ from supabase import create_client
 load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from features.fetch_aqi import fetch_aqi
 from features.engineer_features import clean_to_silver, build_gold_features
+from features.fetch_aqi import fetch_aqi
+
 
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 GOLD_COLS = ["city", "timestamp", "aqi", "hour", "day_of_week",
              "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
              "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"]
+
 
 def run_pipeline(city: str):
     print(f"\n--- Running pipeline for: {city} ---")
@@ -33,10 +35,13 @@ def run_pipeline(city: str):
         # Staleness check
         try:
             from datetime import datetime, timezone
-            ts = datetime.fromisoformat(bronze_row["timestamp"].replace("Z", "+00:00"))
-            age_hours = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+            ts = datetime.fromisoformat(
+                bronze_row["timestamp"].replace("Z", "+00:00"))
+            age_hours = (datetime.now(timezone.utc) -
+                         ts).total_seconds() / 3600
             if age_hours > 6:
-                print(f"[WARN] Station data is {int(age_hours)}h old — may be stale!")
+                print(
+                    f"[WARN] Station data is {int(age_hours)}h old — may be stale!")
             else:
                 print(f"[OK] Station data is {int(age_hours*60)} minutes old")
         except Exception as e:
@@ -44,7 +49,6 @@ def run_pipeline(city: str):
     except Exception as e:
         print(f"[ERROR] Bronze save failed: {e}")
         return
-
 
     # Silver
     silver_row = clean_to_silver(bronze_row)
@@ -74,19 +78,43 @@ def run_pipeline(city: str):
 
     # Gold
     gold_row = build_gold_features(silver_rows)
+
     if not gold_row:
-        print(f"[WARN] Not enough data for Gold yet — need 2+ rows")
-        return
+        # Not enough history for lag/rolling features yet — but if aqi
+        # is available in silver, push a partial row instead of skipping.
+        if silver_row.get("aqi") is None:
+            print(f"[WARN] No aqi in silver row — skipping Gold")
+            return
+        print(f"[WARN] Not enough history for full features — saving partial Gold row")
+        from datetime import datetime
+        ts = datetime.fromisoformat(silver_row["timestamp"].replace("Z", "+00:00"))
+        gold_row = {
+            "city": silver_row["city"],
+            "timestamp": silver_row["timestamp"],
+            "aqi": silver_row["aqi"],
+            "hour": ts.hour,
+            "day_of_week": ts.weekday(),
+            "month": ts.month,
+            "aqi_lag_1h": None,
+            "aqi_lag_24h": None,
+            "aqi_roll_mean_24h": None,
+            "aqi_change_rate": None,
+            "aqi_d1": None,
+            "aqi_d2": None,
+            "aqi_d3": None,
+        }
+
     try:
-        from datetime import datetime, timezone
         gold_filtered = {k: v for k, v in gold_row.items() if k in GOLD_COLS}
-        gold_filtered["timestamp"] = datetime.now(timezone.utc).isoformat()
+        # use the real reading time, not now()
+        gold_filtered["timestamp"] = silver_row["timestamp"]
         supabase.table("aqi_gold_features").upsert(
             gold_filtered, on_conflict="city,timestamp"
         ).execute()
         print(f"[OK] Gold saved")
     except Exception as e:
         print(f"[ERROR] Gold save failed: {e}")
+
 
 if __name__ == "__main__":
     city = sys.argv[1] if len(sys.argv) > 1 else "lahore"

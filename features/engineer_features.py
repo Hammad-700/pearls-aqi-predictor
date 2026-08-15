@@ -37,7 +37,7 @@ def build_gold_features(silver_rows: list) -> dict:
         print("[WARN] Not enough rows for lag features")
         return None
     df = pd.DataFrame(silver_rows)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
     df = df.sort_values("timestamp").reset_index(drop=True)
     latest = df.iloc[-1].copy()
     ts = latest["timestamp"]
