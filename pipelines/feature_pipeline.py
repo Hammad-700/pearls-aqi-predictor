@@ -68,7 +68,7 @@ def run_pipeline(city: str):
         recent = supabase.table("aqi_silver_cleaned")\
             .select("*")\
             .eq("city", city)\
-            .order("timestamp", desc=True)\
+            .order("timestamp", desc=False)\
             .limit(30)\
             .execute()
         silver_rows = list(reversed(recent.data))
