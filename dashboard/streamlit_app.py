@@ -175,8 +175,7 @@ col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
-    <div style="border:2px solid {color};border-radius:14px;padding:24px;
-        text-align:center;margin:4px;min-height:160px">
+    <div style="padding:24px;text-align:center;margin:4px;min-height:160px">
         <div style="font-size:18px;font-weight:700;color:gray;margin-bottom:10px">{f['date']}</div>
         <div style="font-size:48px;font-weight:700;color:{color};line-height:1">{f['aqi']}</div>
         <div style="font-size:12px;color:gray;margin:6px 0">AQI Index</div>
