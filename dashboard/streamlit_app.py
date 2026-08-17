@@ -30,9 +30,10 @@ def load_model():
     try:
         reg = sb.table("model_registry").select("*").order("trained_at", desc=True).limit(1).execute()
         if not reg.data:
-            return None, None, None
+            return None, None, None, None
         meta = reg.data[0]
         version = meta["version"]
+        model_type = meta.get("model_type", "unknown")
         with tempfile.TemporaryDirectory() as tmp:
             model_bytes = sb.storage.from_("models").download(f"champion_{version}.joblib")
             encoder_bytes = sb.storage.from_("models").download(f"encoder_{version}.joblib")
@@ -44,10 +45,10 @@ def load_model():
                 f.write(encoder_bytes)
             model = joblib.load(model_path)
             le = joblib.load(encoder_path)
-        return model, le, version
+        return model, le, version, model_type
     except Exception as e:
         st.error(f"Model load error: {e}")
-        return None, None, None
+        return None, None, None, None
 
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
@@ -99,6 +100,30 @@ def get_history(city):
         .order("timestamp", desc=True).limit(200).execute()
     return result.data
 
+@st.cache_data(ttl=300)
+def get_shap_background(city, _le):
+    sb = get_supabase()
+    result = sb.table("aqi_gold_features")\
+        .select("*").eq("city", city)\
+        .not_.is_("aqi_lag_1h", "null")\
+        .order("timestamp", desc=True).limit(50).execute()
+    df = pd.DataFrame(result.data)
+    if df.empty:
+        return None
+    df["city_encoded"] = _le.transform(df["city"])
+    df = df.dropna(subset=FEATURE_COLS)
+    return df[FEATURE_COLS] if not df.empty else None
+
+def compute_shap_importance(model, model_type, X_background):
+    import shap
+    base_model = model.estimators_[0]
+    if model_type == "lightgbm" or hasattr(base_model, "feature_importances_"):
+        explainer = shap.TreeExplainer(base_model)
+    else:
+        explainer = shap.LinearExplainer(base_model, X_background)
+    shap_values = explainer.shap_values(X_background)
+    return np.abs(shap_values).mean(axis=0)
+
 def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
 
@@ -112,7 +137,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load model
-model, le, version = load_model()
+model, le, version, model_type = load_model()
 if model is None:
     st.error("Model not loaded!")
     st.stop()
@@ -196,7 +221,7 @@ if history:
     hist_df = pd.DataFrame(history)
     hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
     hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")  # ← PKT
-    
+
     # Add gap detection — insert None where gap > 3 hours
     hist_df["gap"] = hist_df["timestamp"].diff() > pd.Timedelta(hours=3)
     x_vals = []
@@ -207,7 +232,7 @@ if history:
             y_vals.append(None)
         x_vals.append(row["timestamp"])
         y_vals.append(row["aqi"])
-    
+
     fig.add_trace(go.Scatter(
         x=x_vals, y=y_vals,
         name="Historical AQI",
@@ -242,10 +267,13 @@ st.markdown("---")
 st.subheader("What drives AQI predictions?")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# Real feature importance from model
 try:
-    import numpy as np
-    # Get feature importances from champion model
+    X_background = get_shap_background(city, le)
+    if X_background is None or len(X_background) < 5:
+        raise ValueError("Not enough historical rows for SHAP background")
+    importances = compute_shap_importance(model, model_type, X_background)
+    chart_title = "Feature Importance (SHAP values)"
+except Exception as e:
     base_estimator = model.estimators_[0]
     if hasattr(base_estimator, 'feature_importances_'):
         importances = np.mean([est.feature_importances_ for est in model.estimators_], axis=0)
@@ -253,8 +281,7 @@ try:
         importances = np.abs(base_estimator.coef_)
     else:
         importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
-except:
-    importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
+    chart_title = "Feature Importance (Model-based)"
 
 importance_data = {
     "Feature": FEATURE_COLS,
@@ -266,7 +293,7 @@ fig2 = go.Figure(go.Bar(
     orientation='h', marker_color="#1f77b4"
 ))
 fig2.update_layout(
-    title="Feature Importance (SHAP values)",
+    title=chart_title,
     height=320,
     plot_bgcolor="rgba(0,0,0,0)",
     margin=dict(t=40, b=40)
