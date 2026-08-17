@@ -24,7 +24,7 @@ st.markdown("""
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-@st.cache_resource
+@st.cache_resource(ttl=300)
 def load_model():
     sb = get_supabase()
     try:
