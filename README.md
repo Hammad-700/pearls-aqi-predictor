@@ -24,13 +24,13 @@ Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) — upda
 
 ## Tech I used
 
-- **Python 3.14.7** — developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
-- **Scikit-learn, XGBoost, LightGBM** — five models trained and compared every day (including naive baseline)
-- **Feature Importance** — built-in LightGBM importances to explain predictions
-- **Supabase** — Postgres for data storage, Storage bucket as model registry
-- **Flask** — REST API with `/predict`, `/history`, `/health` endpoints (local)
-- **Streamlit** — live dashboard deployed on Streamlit Cloud
-- **GitHub Actions** — hourly data collection + daily retraining, fully automated
+- **Python 3.14.7**  developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
+- **Scikit-learn, XGBoost, LightGBM**  five models trained and compared every day (including naive baseline)
+- **Feature Importance**  built-in LightGBM importances to explain predictions
+- **Supabase**  Postgres for data storage, Storage bucket as model registry
+- **Flask**  REST API with `/predict`, `/history`, `/health` endpoints (local)
+- **Streamlit**  live dashboard deployed on Streamlit Cloud
+- **GitHub Actions**  hourly data collection + daily retraining, fully automated
 
 ---
 
@@ -38,9 +38,9 @@ Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) — upda
 
 I used the medallion architecture to keep data clean and traceable:
 
-- **Bronze** (`aqi_bronze_raw`) — raw JSON from the API, nothing touched
-- **Silver** (`aqi_silver_cleaned`) — nulls handled, negative values dropped, types validated
-- **Gold** (`aqi_gold_features`) — lag features, rolling stats, time features, and the 3 forecast targets
+- **Bronze** (`aqi_bronze_raw`)  raw JSON from the API, nothing touched
+- **Silver** (`aqi_silver_cleaned`)  nulls handled, negative values dropped, types validated
+- **Gold** (`aqi_gold_features`)  lag features, rolling stats, time features, and the 3 forecast targets
 
 Every row has a `(city, timestamp)` composite key. This prevents duplicate rows and ensures data integrity across all 3 layers.
 
@@ -48,7 +48,7 @@ Every row has a `(city, timestamp)` composite key. This prevents duplicate rows 
 
 ## Models and results
 
-Trained all 5 models on the same features with a **chronological train/test split** (last 20% of dates — no random shuffle, required for time series).
+Trained all 5 models on the same features with a **chronological train/test split** (last 20% of dates - no random shuffle, required for time series).
 
 | Model | Avg RMSE | Notes |
 |-------|----------|-------|
@@ -68,7 +68,7 @@ Per-horizon breakdown for LightGBM champion:
 | Day 2 | 11.80 | 0.85 |
 | Day 3 | 12.94 | 0.82 |
 
-Champion gate is in place — model only gets promoted if it beats the existing champion's RMSE.
+Champion gate is in place , model only gets promoted if it beats the existing champion's RMSE.
 
 ---
 
@@ -83,7 +83,7 @@ Champion gate is in place — model only gets promoted if it beats the existing 
 | `hour`, `day_of_week`, `month` | Time patterns (UTC) |
 | `city_encoded` | City identifier |
 
-LightGBM feature importance shows `aqi_lag_1h` and `aqi_roll_mean_24h` are the strongest predictors — recent AQI history matters most.
+LightGBM feature importance shows `aqi_lag_1h` and `aqi_roll_mean_24h` are the strongest predictors - recent AQI history matters most.
 
 ---
 
@@ -174,12 +174,12 @@ pearls-aqi-predictor/
 
 ## Engineering decisions
 
-- **Chronological split** — time series data requires time-aware train/test split, not random shuffle
-- **Champion gate** — new model only promoted if it beats existing champion RMSE
-- **Staleness detection** — pipeline warns if station data is older than 6 hours
-- **UTC everywhere** — all timestamps stored in UTC, converted to PKT only for display
-- **Composite key (city, timestamp)** — prevents duplicate rows at DB level
-- **Naive baseline included** — proves model adds real value (59% better than mean predictor)
+- **Chronological split**  time series data requires time-aware train/test split, not random shuffle
+- **Champion gate**  new model only promoted if it beats existing champion RMSE
+- **Staleness detection**  pipeline warns if station data is older than 6 hours
+- **UTC everywhere**  all timestamps stored in UTC, converted to PKT only for display
+- **Composite key (city, timestamp)**  prevents duplicate rows at DB level
+- **Naive baseline included**  proves model adds real value (59% better than mean predictor)
 
 ---
 
