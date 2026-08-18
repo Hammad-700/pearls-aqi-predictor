@@ -272,7 +272,7 @@ try:
     if X_background is None or len(X_background) < 5:
         raise ValueError("Not enough historical rows for SHAP background")
     importances = compute_shap_importance(model, model_type, X_background)
-    chart_title = "Feature Importance (SHAP values)"
+    chart_title = "Feature Importance"
 except Exception as e:
     base_estimator = model.estimators_[0]
     if hasattr(base_estimator, 'feature_importances_'):

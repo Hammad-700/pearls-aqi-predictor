@@ -88,8 +88,12 @@ def evaluate(model, X_test, y_test):
     return metrics
 
 
+from sklearn.dummy import DummyRegressor
+
+
 def get_models():
     models = {
+        "naive_baseline": MultiOutputRegressor(DummyRegressor(strategy="mean")),
         "ridge": MultiOutputRegressor(Ridge()),
         "random_forest": MultiOutputRegressor(
             RandomForestRegressor(n_estimators=30, max_depth=6, random_state=42)

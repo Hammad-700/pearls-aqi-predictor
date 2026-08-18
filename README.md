@@ -37,7 +37,7 @@ Every row has a `(city, timestamp)` composite key. This prevents Lahore data fro
 
 ## Models and results
 
-Trained all 4 models on the same features with the same train/test split (last 20% of dates — no random shuffle, because time series needs time-based splits).
+Trained all 4 models on the same features with the same train/test split (last 20% of dates — chronological split, no random shuffle, because time series needs time-based splits).
 
 |      Model       | Avg RMSE |             
 |------------------|          |
