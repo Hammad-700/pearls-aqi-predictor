@@ -1,6 +1,6 @@
 # Pearls AQI Predictor
 
-I built this project to predict Air Quality Index (AQI) for the next 3 days using real data from the AQICN API. The idea was to build something end-to-end — not just a model in a notebook, but a full pipeline that collects data automatically, retrains itself daily, and shows forecasts on a live website.
+I built this project to predict Air Quality Index (AQI) for the next 3 days using real data from the AQICN API. The idea was to build something end-to-end not just a model in a notebook, but a full pipeline that collects data automatically, retrains itself daily, and shows forecasts on a live website.
 
 **Live app:** https://pearls-aqi-predictor-4hsijrpatnebkrka8uajpj.streamlit.app
 
@@ -18,19 +18,19 @@ AQICN API → Bronze (raw) → Silver (cleaned) → Gold (features) → Model �
 
 All three data layers live in Supabase Postgres. The trained model is saved to Supabase Storage so the dashboard can load it without retraining.
 
-Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) — updated every 4-6 hours.
+Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) - updated every 4-6 hours.
 
 ---
 
 ## Tech I used
 
-- **Python 3.14.7**  developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
-- **Scikit-learn, XGBoost, LightGBM**  five models trained and compared every day (including naive baseline)
-- **Feature Importance**  built-in LightGBM importances to explain predictions
-- **Supabase**  Postgres for data storage, Storage bucket as model registry
-- **Flask**  REST API with `/predict`, `/history`, `/health` endpoints (local)
-- **Streamlit**  live dashboard deployed on Streamlit Cloud
-- **GitHub Actions**  hourly data collection + daily retraining, fully automated
+- **Python 3.14.7** - developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
+- **Scikit-learn, XGBoost, LightGBM** - five models trained and compared every day (including naive baseline)
+- **Feature Importance** - built-in LightGBM importances to explain predictions
+- **Supabase** - Postgres for data storage, Storage bucket as model registry
+- **Flask** - REST API with `/predict`, `/history`, `/health` endpoints (local)
+- **Streamlit** - live dashboard deployed on Streamlit Cloud
+- **GitHub Actions** - hourly data collection + daily retraining, fully automated
 
 ---
 
@@ -38,11 +38,11 @@ Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) — upda
 
 I used the medallion architecture to keep data clean and traceable:
 
-- **Bronze** (`aqi_bronze_raw`)  raw JSON from the API, nothing touched
-- **Silver** (`aqi_silver_cleaned`)  nulls handled, negative values dropped, types validated
-- **Gold** (`aqi_gold_features`)  lag features, rolling stats, time features, and the 3 forecast targets
+- **Bronze** (`aqi_bronze_raw`) - raw JSON from the API, nothing touched
+- **Silver** (`aqi_silver_cleaned`) - nulls handled, negative values dropped, types validated
+- **Gold** (`aqi_gold_features`) - lag features, rolling stats, time features, and the 3 forecast targets
 
-Every row has a `(city, timestamp)` composite key. This prevents duplicate rows and ensures data integrity across all 3 layers.
+Every row has a `(city, timestamp)` - composite key. This prevents duplicate rows and ensures data integrity across all 3 layers.
 
 ---
 
@@ -52,13 +52,13 @@ Trained all 5 models on the same features with a **chronological train/test spli
 
 | Model | Avg RMSE | Notes |
 |-------|----------|-------|
-| Naive Baseline | 30.77 | predict mean — no skill |
+| Naive Baseline | 30.77 | predict mean - no skill |
 | LightGBM | 12.60 | ✅ Champion |
 | Random Forest | 12.84 | |
 | Ridge Regression | 13.44 | |
 | XGBoost | 14.23 | |
 
-**LightGBM beats the naive baseline by 59%** — clear evidence the model adds real value.
+**LightGBM beats the naive baseline by 59%** - clear evidence the model adds real value.
 
 Per-horizon breakdown for LightGBM champion:
 
@@ -174,25 +174,25 @@ pearls-aqi-predictor/
 
 ## Engineering decisions
 
-- **Chronological split**  time series data requires time-aware train/test split, not random shuffle
-- **Champion gate**  new model only promoted if it beats existing champion RMSE
-- **Staleness detection**  pipeline warns if station data is older than 6 hours
-- **UTC everywhere**  all timestamps stored in UTC, converted to PKT only for display
-- **Composite key (city, timestamp)**  prevents duplicate rows at DB level
-- **Naive baseline included**  proves model adds real value (59% better than mean predictor)
+- **Chronological split** - time series data requires time-aware train/test split, not random shuffle
+- **Champion gate** - new model only promoted if it beats existing champion RMSE
+- **Staleness detection** - pipeline warns if station data is older than 6 hours
+- **UTC everywhere** - all timestamps stored in UTC, converted to PKT only for display
+- **Composite key (city, timestamp)** - prevents duplicate rows at DB level
+- **Naive baseline included** - proves model adds real value (59% better than mean predictor)
 
 ---
 
 ## Known limitations
 
-- Training data uses synthetic backfill for first 30 days — accuracy improves as real hourly data accumulates
-- Only Lahore supported (station @A471607) — single station means total data loss if station goes offline
+- Training data uses synthetic backfill for first 30 days - accuracy improves as real hourly data accumulates
+- Only Lahore supported (station @A471607) - single station means total data loss if station goes offline
 - AQI station updates every 4-6 hours, not every minute
-- Flask API implemented and tested locally but not publicly deployed — Python 3.14 not yet supported by free hosting platforms
-- Model margins between LightGBM/RF/Ridge are small (~0.84 RMSE) — may be noise with current dataset size
+- Flask API implemented and tested locally but not publicly deployed - Python 3.14 not yet supported by free hosting platforms
+- Model margins between LightGBM/RF/Ridge are small (~0.84 RMSE) - may be noise with current dataset size
 
 ---
 
 ## Author
 
-Muhammad Hammad Khalid — Data Science Project
+Muhammad Hammad Khalid - Data Science Project
