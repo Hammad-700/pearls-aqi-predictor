@@ -71,6 +71,23 @@ def prepare_data(df):
     split = int(len(df) * 0.8)
     return X[:split], X[split:], y[:split], y[split:], le
 
+def cross_validate_model(model, X, y, name):
+    from sklearn.model_selection import TimeSeriesSplit
+    tscv = TimeSeriesSplit(n_splits=5)
+    rmse_scores = []
+    
+    for fold, (train_idx, test_idx) in enumerate(tscv.split(X)):
+        X_tr, X_te = X.iloc[train_idx], X.iloc[test_idx]
+        y_tr, y_te = y.iloc[train_idx], y.iloc[test_idx]
+        model.fit(X_tr, y_tr)
+        preds = model.predict(X_te)
+        rmse = float(np.sqrt(mean_squared_error(y_te, preds)))
+        rmse_scores.append(rmse)
+    
+    mean_rmse = np.mean(rmse_scores)
+    std_rmse = np.std(rmse_scores)
+    print(f"  CV RMSE: {mean_rmse:.2f} ± {std_rmse:.2f} (5-fold TimeSeriesSplit)")
+    return mean_rmse, std_rmse
 
 def evaluate(model, X_test, y_test):
     preds = model.predict(X_test)
@@ -163,6 +180,11 @@ def run_training():
         model.fit(X_train, y_train)
         print(f"[EVAL] {name}:")
         metrics = evaluate(model, X_test, y_test)
+        cv_mean, cv_std = cross_validate_model(model, 
+            pd.concat([X_train, X_test]), 
+            pd.concat([y_train, y_test]), name)
+        metrics["cv_rmse_mean"] = cv_mean
+        metrics["cv_rmse_std"] = cv_std
         results[name] = {"model": model, "metrics": metrics}
 
         supabase.table("training_runs").insert({
