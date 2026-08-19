@@ -20,6 +20,8 @@ All three data layers live in Supabase Postgres. The trained model is saved to S
 
 Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) - updated every 4-6 hours.
 
+![AQI system architecture](images/AQI-Architecture.png)
+
 ---
 
 ## Tech I used
