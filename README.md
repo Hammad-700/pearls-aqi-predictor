@@ -50,29 +50,29 @@ Every row has a `(city, timestamp)` - composite key. This prevents duplicate row
 
 ## Models and results
 
-Trained all 5 models on the same features with a **chronological train/test split** (last 20% of dates - no random shuffle, required for time series).
+Trained all 5 models on the same features with a **chronological train/test split** (last 20% of dates — no random shuffle, required for time series).
 
 | Model | Avg RMSE | Notes |
 |-------|----------|-------|
-| Naive Baseline | 30.77 | predict mean - no skill |
-| LightGBM | 12.60 | ✅ Champion |
-| Random Forest | 12.84 | |
+| Naive Baseline | 30.77 | predict mean — no skill |
+| Random Forest | 11.44 | ✅ Champion (real data) |
+| LightGBM | 12.60 | previous champion (mixed data) |
 | Ridge Regression | 13.44 | |
 | XGBoost | 14.23 | |
 
-**LightGBM beats the naive baseline by 59%** - clear evidence the model adds real value.
+**Random Forest beats the naive baseline by 63%** — clear evidence the model adds real value.
 
-Per-horizon breakdown for LightGBM champion:
+Champion was updated from LightGBM (RMSE 12.60) to Random Forest (RMSE 11.44) after synthetic backfill data was removed and model retrained on real Lahore AQI data only (Aug 12–21, 2026).
+
+Per-horizon breakdown for Random Forest champion:
 
 | Day | RMSE | R² |
 |-----|------|----|
-| Day 1 | 13.07 | 0.82 |
-| Day 2 | 11.80 | 0.85 |
-| Day 3 | 12.94 | 0.82 |
+| Day 1 | 13.02 | 0.82 |
+| Day 2 | 11.76 | 0.85 |
+| Day 3 | 13.73 | 0.80 |
 
-Champion gate is in place , model only gets promoted if it beats the existing champion's RMSE.
-
----
+Champion gate is in place — model only gets promoted if it beats the existing champion's RMSE.
 
 ## Features used
 
