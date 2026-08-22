@@ -16,6 +16,11 @@ st.markdown("""
     padding-left: 2rem;
     padding-right: 2rem;
 }
+@media (prefers-color-scheme: dark) {
+    .aqi-card-text {
+        color: white !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -197,12 +202,12 @@ st.markdown(f"""
     display:flex;align-items:center;gap:24px;margin:10px 0 30px 0">
     <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
         padding:14px 20px;text-align:center;min-width:90px">
-        <div style="font-size:44px;font-weight:800;color:{current_text_color};line-height:1">{current_aqi}</div>
-        <div style="font-size:11px;color:{current_text_color};margin-top:4px;font-weight:600;letter-spacing:0.5px">US AQI</div>
+        <div class="aqi-card-text" style="font-size:44px;font-weight:800;color:{current_text_color};line-height:1">{current_aqi}</div>
+        <div class="aqi-card-text" style="font-size:11px;color:{current_text_color};margin-top:4px;font-weight:600;letter-spacing:0.5px">US AQI</div>
     </div>
     <div>
-        <div style="font-size:26px;font-weight:700;color:{current_text_color}">{alert_label}</div>
-        <div style="font-size:13px;color:{current_text_color};margin-top:6px;opacity:0.8">
+        <div class="aqi-card-text" style="font-size:26px;font-weight:700;color:{current_text_color}">{alert_label}</div>
+        <div class="aqi-card-text" style="font-size:13px;color:{current_text_color};margin-top:6px;opacity:0.8">
             🌍 Lahore, Pakistan — Live AQI reading
         </div>
     </div>
@@ -223,13 +228,13 @@ for col, f in zip([col1, col2, col3], forecast):
     col.markdown(f"""
     <div style="background-color:{color}22;border-radius:14px;padding:20px;
         text-align:center;margin:4px">
-        <div style="font-size:15px;font-weight:600;color:{text_color};margin-bottom:12px">{f['date']}</div>
+        <div class="aqi-card-text" style="font-size:15px;font-weight:600;color:{text_color};margin-bottom:12px">{f['date']}</div>
         <div style="background-color:{color}33;border-radius:10px;padding:12px;display:inline-block;min-width:80px">
-            <div style="font-size:44px;font-weight:800;color:{text_color};line-height:1">{f['aqi']}</div>
-            <div style="font-size:11px;color:{text_color};margin-top:4px;font-weight:600">US AQI</div>
+            <div class="aqi-card-text" style="font-size:44px;font-weight:800;color:{text_color};line-height:1">{f['aqi']}</div>
+            <div class="aqi-card-text" style="font-size:11px;color:{text_color};margin-top:4px;font-weight:600">US AQI</div>
         </div>
         <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{color}44;color:{text_color};font-size:13px;font-weight:700">{label}</div>
+            background:{color}44;color:{text_color};font-size:13px;font-weight:700" class="aqi-card-text">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
