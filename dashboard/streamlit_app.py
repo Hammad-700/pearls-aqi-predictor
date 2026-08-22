@@ -181,15 +181,35 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Alert banner
+# Current AQI card + Alert banner
 max_aqi = max(f["aqi"] for f in forecast)
 alert_label, alert_color = get_alert(current_aqi)
-st.markdown(
-    f'<div style="background-color:{alert_color};padding:14px 20px;border-radius:10px;'
-    f'color:black;font-size:17px;font-weight:600;margin:10px 0 30px 0;">'
-    f'🌍 Lahore Current AQI: {current_aqi} — {alert_label}</div>',
-    unsafe_allow_html=True
-)
+
+col_aqi, col_info = st.columns([1, 3])
+
+with col_aqi:
+    st.markdown(f"""
+    <div style="background-color:{alert_color};border-radius:12px;padding:16px;
+        text-align:center;display:inline-block;min-width:100px">
+        <div style="font-size:42px;font-weight:800;color:black;line-height:1">{current_aqi}</div>
+        <div style="font-size:11px;color:black;margin-top:4px;font-weight:600">US AQI</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_info:
+    st.markdown(f"""
+    <div style="background-color:{alert_color};border-radius:12px;padding:16px 24px;
+        display:flex;align-items:center;height:100%">
+        <div>
+            <div style="font-size:24px;font-weight:700;color:black">{alert_label}</div>
+            <div style="font-size:13px;color:black;margin-top:4px">
+                🌍 Lahore, Pakistan — Live AQI reading
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<div style='margin:20px 0'></div>", unsafe_allow_html=True)
 
 # Section 1 — Forecast cards
 st.markdown("---")
