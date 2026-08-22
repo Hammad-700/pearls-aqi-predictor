@@ -58,6 +58,12 @@ def get_alert(aqi):
     elif aqi <= 300: return "Very Unhealthy", "#6a1b9a"
     else: return "Hazardous", "#7e0023"
 
+def get_text_color(background_color):
+    hex_color = background_color.lstrip("#")
+    red, green, blue = (int(hex_color[index:index + 2], 16) for index in (0, 2, 4))
+    brightness = (red * 299 + green * 587 + blue * 114) / 1000
+    return "black" if brightness >= 128 else "white"
+
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h", "aqi_change_rate"]
 
@@ -212,16 +218,17 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
+    text_color = get_text_color(color)
     col.markdown(f"""
     <div style="background-color:{color}22;border-radius:14px;padding:20px;
         text-align:center;margin:4px">
-        <div style="font-size:15px;font-weight:600;color:black;margin-bottom:12px">{f['date']}</div>
+        <div style="font-size:15px;font-weight:600;color:{text_color};margin-bottom:12px">{f['date']}</div>
         <div style="background-color:{color}33;border-radius:10px;padding:12px;display:inline-block;min-width:80px">
-            <div style="font-size:44px;font-weight:800;color:{color};line-height:1">{f['aqi']}</div>
-            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600">US AQI</div>
+            <div style="font-size:44px;font-weight:800;color:{text_color};line-height:1">{f['aqi']}</div>
+            <div style="font-size:11px;color:{text_color};margin-top:4px;font-weight:600">US AQI</div>
         </div>
         <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{color}44;color:black;font-size:13px;font-weight:700">{label}</div>
+            background:{color}44;color:{text_color};font-size:13px;font-weight:700">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
