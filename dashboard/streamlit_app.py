@@ -213,12 +213,15 @@ col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
-    <div style="padding:24px;text-align:center;margin:4px;min-height:160px">
-        <div style="font-size:18px;font-weight:700;color:gray;margin-bottom:10px">{f['date']}</div>
-        <div style="font-size:48px;font-weight:700;color:{color};line-height:1">{f['aqi']}</div>
-        <div style="font-size:12px;color:gray;margin:6px 0">AQI Index</div>
-        <div style="margin-top:12px;padding:7px;border-radius:8px;
-            background:{color}22;color:{color};font-size:13px;font-weight:600">{label}</div>
+    <div style="background-color:{color}22;border-radius:14px;padding:20px;
+        text-align:center;margin:4px">
+        <div style="font-size:15px;font-weight:600;color:gray;margin-bottom:12px">{f['date']}</div>
+        <div style="background-color:{color}33;border-radius:10px;padding:12px;display:inline-block;min-width:80px">
+            <div style="font-size:44px;font-weight:800;color:{color};line-height:1">{f['aqi']}</div>
+            <div style="font-size:11px;color:gray;margin-top:4px;font-weight:600">US AQI</div>
+        </div>
+        <div style="margin-top:12px;padding:8px;border-radius:8px;
+            background:{color}44;color:{color};font-size:13px;font-weight:700">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
