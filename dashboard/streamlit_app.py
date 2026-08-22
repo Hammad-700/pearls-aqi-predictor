@@ -18,6 +18,16 @@ st.markdown("""
     padding-left: 2rem;
     padding-right: 2rem;
 }
+
+/* Reduce header spacing */
+h1 {
+    margin-bottom: 0.2rem !important;
+}
+
+h1 + div {
+    margin-top: 0rem !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
