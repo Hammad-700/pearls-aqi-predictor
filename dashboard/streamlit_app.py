@@ -11,6 +11,8 @@ from datetime import datetime, timedelta, timezone
 st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰", page_icon="🌍", layout="wide")
 st.markdown("""
 <style>
+
+/* Main page spacing */
 .block-container {
     max-width: 1100px;
     padding-top: 0.5rem;
@@ -19,15 +21,24 @@ st.markdown("""
     padding-right: 2rem;
 }
 
-/* Reduce header spacing */
+/* Reduce space below main title */
 h1 {
+    margin-top: 0rem !important;
     margin-bottom: 0.2rem !important;
 }
 
+/* Reduce spacing around the header markdown */
 h1 + div {
     margin-top: 0rem !important;
 }
 
+/* Reduce paragraph spacing inside header */
+h1 + div p {
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.15rem !important;
+}
+
+/* Keep forecast card text visible in both Light and Dark mode */
 </style>
 """, unsafe_allow_html=True)
 
