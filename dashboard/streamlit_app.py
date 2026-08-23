@@ -232,18 +232,12 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
-    col.markdown(f"""
-    <div style="background-color:rgba(255,255,255,0.05);border-radius:14px;padding:20px;
-        border:1px solid {color};text-align:center;margin:4px">
-        <div style="font-size:15px;font-weight:600;color:inherit;margin-bottom:12px">{f['date']}</div>
-        <div style="background-color:{color}33;border-radius:10px;padding:12px;display:inline-block;min-width:80px">
-            <div style="font-size:44px;font-weight:800;color:{color};line-height:1">{f['aqi']}</div>
-            <div style="font-size:11px;color:inherit;margin-top:4px;font-weight:600">US AQI</div>
-        </div>
-        <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{color};color:black;font-size:13px;font-weight:700">{label}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    with col:
+        st.markdown(f"<div style='text-align:center;color:{color};font-size:13px;font-weight:600;margin-bottom:4px'>{f['date']}</div>", unsafe_allow_html=True)
+        st.metric(
+            label=label,
+            value=f"AQI {f['aqi']}",
+        )
 
 spacer()
 
