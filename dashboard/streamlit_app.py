@@ -321,10 +321,21 @@ except Exception as e:
         importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
     chart_title = "Feature Importance (Model-based)"
 
+feature_labels = {
+    "city_encoded": "City",
+    "hour": "Hour of Day",
+    "day_of_week": "Day of Week",
+    "month": "Month",
+    "aqi_lag_1h": "AQI 1 Hour Ago",
+    "aqi_lag_24h": "AQI 24 Hours Ago",
+    "aqi_roll_mean_24h": "24h Rolling Average",
+    "aqi_change_rate": "AQI Change Rate"
+}
 importance_data = {
-    "Feature": FEATURE_COLS,
+    "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],
     "Importance": importances
 }
+
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
     x=imp_df["Importance"], y=imp_df["Feature"],
