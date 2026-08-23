@@ -243,7 +243,7 @@ for col, f in zip([col1, col2, col3], forecast):
             <div style="font-size:11px;color:inherit;margin-top:4px;font-weight:600">US AQI</div>
         </div>
         <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{color};color:black;font-size:13px;font-weight:700">{label}</div>
+            background:{color};color:black;font-size:15px;font-weight:700">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
