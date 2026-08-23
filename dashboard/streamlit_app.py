@@ -73,7 +73,7 @@ def load_model():
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
     elif aqi <= 100: return "Moderate", "#ffd600"
-    elif aqi <= 150: return "Unhealthy for Sensitive Groups", "#ff6d00"
+    elif aqi <= 150: return "Sensitive", "#ff6d00"
     elif aqi <= 200: return "Unhealthy", "#d50000"
     elif aqi <= 300: return "Very Unhealthy", "#6a1b9a"
     else: return "Hazardous", "#7e0023"
@@ -212,7 +212,7 @@ st.markdown(f"""
     <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
         padding:14px 20px;text-align:center;min-width:110px">
         <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
-        <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">US AQI</div>
+        <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
     </div>
     <div>
         <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
