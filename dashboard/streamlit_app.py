@@ -216,7 +216,7 @@ st.markdown(f"""
     </div>
     <div>
         <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
-        <div style="font-size:13px;color:black;margin-top:6px;opacity:0.8">
+        <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
             🌍 Lahore, Pakistan — Live AQI reading
         </div>
     </div>
