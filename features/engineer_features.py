@@ -39,6 +39,10 @@ def clean_to_silver(bronze_row: dict) -> dict:
             "wind_direction": weather.get("wind_direction"),
             "precipitation": weather.get("precipitation"),
             "pressure": weather.get("pressure"),
+            "pm25_raw": weather.get("pm25_raw"),
+            "pm10_raw": weather.get("pm10_raw"),
+            "no2_raw": weather.get("no2_raw"),
+            "o3_raw": weather.get("o3_raw"),
         }
     except Exception as e:
         print(f"[ERROR] Silver cleaning failed: {e}")
@@ -81,7 +85,8 @@ def build_gold_features(silver_rows: list) -> dict:
     latest["aqi_change_rate"] = float(latest["aqi"] - prev_aqi) if prev_aqi else None
 
     for col in ["temperature", "humidity", "pm25", "wind_speed",
-                "wind_direction", "precipitation", "pressure"]:
+                "wind_direction", "precipitation", "pressure", "pm25_raw",
+                "pm10_raw", "no2_raw", "o3_raw"]:
         val = df.iloc[-1].get(col)
         latest[col] = float(val) if pd.notna(val) else None
 

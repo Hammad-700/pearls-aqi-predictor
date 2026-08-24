@@ -119,8 +119,9 @@ def get_alert(aqi):
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
                 "aqi_change_rate", "temperature", "humidity", "pm25",
-                "wind_speed", "wind_direction", "precipitation", "pressure"]
-LEGACY_FEATURE_COLS = FEATURE_COLS[:-1]
+                "wind_speed", "wind_direction", "precipitation", "pressure",
+                "pm25_raw", "pm10_raw", "no2_raw", "o3_raw"]
+LEGACY_FEATURE_COLS = FEATURE_COLS[:10]
 
 def predict(city, model, le, feature_cols):
     sb = get_supabase()
@@ -147,8 +148,13 @@ def predict(city, model, le, feature_cols):
         "wind_direction": row.get("wind_direction") or 0,
         "precipitation": row.get("precipitation") or 0,
         "pressure": row.get("pressure") or 0,
+        "pm25_raw": row.get("pm25_raw") or 0,
+        "pm10_raw": row.get("pm10_raw") or 0,
+        "no2_raw": row.get("no2_raw") or 0,
+        "o3_raw": row.get("o3_raw") or 0,
     }
-    X = pd.DataFrame([features])[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
+    X = pd.DataFrame([features]).reindex(columns=feature_cols, fill_value=0)
+    X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
     preds = model.predict(X)[0]
     as_of = row["timestamp"]
     base_date = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
@@ -186,8 +192,8 @@ def get_shap_background(city, _le, feature_cols):
         if col == "city_encoded":
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
-    df = df.dropna(subset=feature_cols)
-    return df[feature_cols] if not df.empty else None
+    df = df.reindex(columns=feature_cols).dropna(subset=feature_cols)
+    return df if not df.empty else None
 
 def compute_shap_importance(model, model_type, X_background):
     import shap

@@ -93,6 +93,10 @@ Champion gate is in place — a model is promoted when it improves RMSE or intro
 | `wind_direction` | Wind direction from Open-Meteo |
 | `precipitation` | Hourly precipitation from Open-Meteo |
 | `pressure` | Mean sea-level pressure from Open-Meteo |
+| `pm25_raw` | Raw PM2.5 concentration from Open-Meteo |
+| `pm10_raw` | Raw PM10 concentration from Open-Meteo |
+| `no2_raw` | Raw nitrogen dioxide concentration from Open-Meteo |
+| `o3_raw` | Raw ozone concentration from Open-Meteo |
 
 LightGBM feature importance shows `aqi_lag_1h` and `aqi_roll_mean_24h` are the strongest predictors - recent AQI history matters most.
 

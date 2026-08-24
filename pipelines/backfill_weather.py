@@ -24,8 +24,7 @@ def timestamp_key(value):
 
 
 def fetch_weather(start_date, end_date):
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
+    weather_params = {
         "latitude": LATITUDE,
         "longitude": LONGITUDE,
         "start_date": start_date.strftime("%Y-%m-%d"),
@@ -33,11 +32,31 @@ def fetch_weather(start_date, end_date):
         "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,pressure_msl",
         "timezone": "UTC",
     }
-    response = requests.get(url, params=params, timeout=60)
+    response = requests.get(
+        "https://archive-api.open-meteo.com/v1/archive",
+        params=weather_params,
+        timeout=60,
+    )
     response.raise_for_status()
     hourly = response.json().get("hourly", {})
+
+    air_quality_params = {
+        "latitude": LATITUDE,
+        "longitude": LONGITUDE,
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "end_date": end_date.strftime("%Y-%m-%d"),
+        "hourly": "pm2_5,pm10,nitrogen_dioxide,ozone",
+        "timezone": "UTC",
+    }
+    air_quality_response = requests.get(
+        "https://air-quality-api.open-meteo.com/v1/air-quality",
+        params=air_quality_params,
+        timeout=60,
+    )
+    air_quality_response.raise_for_status()
+    air_quality_hourly = air_quality_response.json().get("hourly", {})
     weather = {}
-    for timestamp, temperature, humidity, wind_speed, wind_direction, precipitation, pressure in zip(
+    for timestamp, temperature, humidity, wind_speed, wind_direction, precipitation, pressure, pm25_raw, pm10_raw, no2_raw, o3_raw in zip(
         hourly.get("time", []),
         hourly.get("temperature_2m", []),
         hourly.get("relative_humidity_2m", []),
@@ -45,9 +64,14 @@ def fetch_weather(start_date, end_date):
         hourly.get("wind_direction_10m", []),
         hourly.get("precipitation", []),
         hourly.get("pressure_msl", []),
+        air_quality_hourly.get("pm2_5", []),
+        air_quality_hourly.get("pm10", []),
+        air_quality_hourly.get("nitrogen_dioxide", []),
+        air_quality_hourly.get("ozone", []),
     ):
         if all(value is not None for value in [temperature, humidity, wind_speed,
-                                               wind_direction, precipitation, pressure]):
+                                               wind_direction, precipitation, pressure,
+                                               pm25_raw, pm10_raw, no2_raw, o3_raw]):
             weather[timestamp_key(timestamp)] = {
                 "temperature": float(temperature),
                 "humidity": float(humidity),
@@ -55,6 +79,10 @@ def fetch_weather(start_date, end_date):
                 "wind_direction": float(wind_direction),
                 "precipitation": float(precipitation),
                 "pressure": float(pressure),
+                "pm25_raw": float(pm25_raw),
+                "pm10_raw": float(pm10_raw),
+                "no2_raw": float(no2_raw),
+                "o3_raw": float(o3_raw),
             }
     return weather
 
@@ -80,7 +108,7 @@ def update_table(supabase, table, rows, weather):
 def main():
     supabase = get_supabase()
     gold_rows = supabase.table("aqi_gold_features").select(
-        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure"
+        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure,pm25_raw,pm10_raw,no2_raw,o3_raw"
     ).eq("city", CITY).not_.is_("aqi_d1", "null").order(
         "timestamp", desc=False
     ).execute().data
@@ -88,7 +116,7 @@ def main():
         raise RuntimeError("No labeled Lahore Gold rows found")
 
     silver_rows = supabase.table("aqi_silver_cleaned").select(
-        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure"
+        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure,pm25_raw,pm10_raw,no2_raw,o3_raw"
     ).eq("city", CITY).order("timestamp", desc=False).execute().data
 
     start = pd.to_datetime(gold_rows[0]["timestamp"], utc=True).date()

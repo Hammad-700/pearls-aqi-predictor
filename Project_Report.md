@@ -91,7 +91,7 @@ AQICN temperature and humidity values can still be used when available.
 
 ## Feature Engineering
 
-The model currently uses 15 input features:
+The model currently uses 19 input features:
 
   Feature               Purpose
   --------------------- ---------------------------
@@ -110,6 +110,10 @@ The model currently uses 15 input features:
   `wind_direction`      Wind direction
   `precipitation`       Hourly precipitation
   `pressure`            Mean sea-level pressure
+  `pm25_raw`            Raw PM2.5 concentration
+  `pm10_raw`            Raw PM10 concentration
+  `no2_raw`             Raw nitrogen dioxide concentration
+  `o3_raw`              Raw ozone concentration
 
 The strongest reported predictors are `aqi_lag_1h` and
 `aqi_roll_mean_24h`.

@@ -21,6 +21,7 @@ GOLD_COLS = [
     "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
     "aqi_change_rate", "temperature", "humidity", "pm25",
     "wind_speed", "wind_direction", "precipitation", "pressure",
+    "pm25_raw", "pm10_raw", "no2_raw", "o3_raw",
     "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
@@ -136,6 +137,9 @@ def build_gold_from_rows(rows: list, idx: int) -> dict | None:
     for col in ["pm25", "wind_speed", "wind_direction", "precipitation", "pressure"]:
         val = df.iloc[-1].get(col)
         latest[col] = float(val) if pd.notna(val) else None
+    for col in ["pm25_raw", "pm10_raw", "no2_raw", "o3_raw"]:
+        val = df.iloc[-1].get(col)
+        latest[col] = float(val) if pd.notna(val) else None
 
     latest["aqi_d1"] = None
     latest["aqi_d2"] = None
@@ -191,6 +195,10 @@ def run_backfill(city: str, days: int = 30):
             "wind_direction": None,
             "precipitation": None,
             "pressure": None,
+            "pm25_raw": None,
+            "pm10_raw": None,
+            "no2_raw": None,
+            "o3_raw": None,
         })
         current += timedelta(hours=1)
 

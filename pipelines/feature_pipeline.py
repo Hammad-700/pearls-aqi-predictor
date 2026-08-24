@@ -20,6 +20,7 @@ GOLD_COLS = [
     "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
     "aqi_change_rate", "temperature", "humidity", "pm25",
     "wind_speed", "wind_direction", "precipitation", "pressure",
+    "pm25_raw", "pm10_raw", "no2_raw", "o3_raw",
     "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
@@ -123,6 +124,10 @@ def run_pipeline(city: str):
                 "wind_direction": silver_row.get("wind_direction"),
                 "precipitation": silver_row.get("precipitation"),
                 "pressure": silver_row.get("pressure"),
+                "pm25_raw": silver_row.get("pm25_raw"),
+                "pm10_raw": silver_row.get("pm10_raw"),
+                "no2_raw": silver_row.get("no2_raw"),
+                "o3_raw": silver_row.get("o3_raw"),
                 "aqi_d1": None,
                 "aqi_d2": None,
                 "aqi_d3": None,

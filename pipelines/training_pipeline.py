@@ -36,10 +36,12 @@ except ImportError:
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
                 "aqi_change_rate", "temperature", "humidity", "pm25",
-                "wind_speed", "wind_direction", "precipitation", "pressure"]
+                "wind_speed", "wind_direction", "precipitation", "pressure",
+                "pm25_raw", "pm10_raw", "no2_raw", "o3_raw"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
 WEATHER_COLS = ["temperature", "humidity", "wind_speed", "wind_direction",
-                "precipitation", "pressure"]
+                "precipitation", "pressure", "pm25_raw", "pm10_raw",
+                "no2_raw", "o3_raw"]
 MIN_WEATHER_COVERAGE = 0.80
 
 
