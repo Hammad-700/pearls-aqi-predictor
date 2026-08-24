@@ -427,7 +427,16 @@ feature_labels = {
     "aqi_roll_mean_24h": "24h Rolling Average",
     "aqi_change_rate": "AQI Change Rate",
     "temperature": "Temperature",
-    "humidity": "Humidity"
+    "humidity": "Humidity",
+    "pm25": "PM2.5",
+    "wind_speed": "Wind Speed",
+    "wind_direction": "Wind Direction",
+    "precipitation": "Precipitation",
+    "pressure": "Pressure",
+    "pm25_raw": "PM2.5 Raw",
+    "pm10_raw": "PM10 Raw",
+    "no2_raw": "NO2 Raw",
+    "o3_raw": "O3 Raw",
 }
 importance_data = {
     "Feature": [feature_labels.get(f, f) for f in model_feature_cols],
@@ -441,9 +450,10 @@ fig2 = go.Figure(go.Bar(
 ))
 fig2.update_layout(
     title=chart_title,
-    height=320,
+    height=max(420, len(imp_df) * 32 + 90),
+    yaxis=dict(dtick=1, automargin=True),
     plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(t=40, b=40)
+    margin=dict(t=40, b=40, l=170, r=20)
 )
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
