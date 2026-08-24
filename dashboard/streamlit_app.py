@@ -46,9 +46,9 @@ h1 + div p {
     }
 
     .temperature-value-box {
-        flex: 0 0 145px;
+        flex: 0 0 110px;
         min-width: 0 !important;
-        padding: 12px 8px !important;
+        padding: 14px 20px !important;
     }
 
     .temperature-value {
