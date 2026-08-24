@@ -83,14 +83,15 @@ The project uses Open-Meteo for:
 -   Relative humidity
 -   Asia/Karachi local time
 
-If the Open-Meteo request fails, available AQICN weather values can be
-used as a fallback.
+Open-Meteo provides temperature, relative humidity, wind speed, wind
+direction, precipitation, and pressure. If the request fails, legacy
+AQICN temperature and humidity values can still be used when available.
 
 ------------------------------------------------------------------------
 
 ## Feature Engineering
 
-The model currently uses 10 input features:
+The model currently uses 15 input features:
 
   Feature               Purpose
   --------------------- ---------------------------
@@ -104,6 +105,11 @@ The model currently uses 10 input features:
   `aqi_change_rate`     AQI direction/change
   `temperature`         Weather information
   `humidity`            Weather information
+  `pm25`                Fine particulate matter
+  `wind_speed`          Wind speed
+  `wind_direction`      Wind direction
+  `precipitation`       Hourly precipitation
+  `pressure`            Mean sea-level pressure
 
 The strongest reported predictors are `aqi_lag_1h` and
 `aqi_roll_mean_24h`.
@@ -161,10 +167,10 @@ The project documentation reports:
   Model                Average RMSE
   ------------------ --------------
   Naive Baseline              20.31
-  Random Forest               11.32
-  LightGBM                    11.88
-  XGBoost                     11.94
-  Ridge Regression            12.59
+  Random Forest               11.34
+  LightGBM                    11.48
+  XGBoost                     11.67
+  Ridge Regression            12.65
 
 Random Forest achieved approximately a **44% lower RMSE** than the naive
 baseline in the reported comparison.
@@ -173,9 +179,9 @@ The reported current champion results are:
 
   Forecast      RMSE     R²
   ---------- ------- ------
-  Day 1        12.02   0.63
-  Day 2        11.01   0.69
-  Day 3        10.85   0.73
+  Day 1        11.93   0.64
+  Day 2        11.10   0.69
+  Day 3        10.97   0.72
 
 These results are preliminary because synthetic historical data was used
 for initial backfilling.
@@ -184,7 +190,8 @@ for initial backfilling.
 
 ## Champion Model
 
-A new model is promoted only when it improves the current champion.
+A new model is promoted when it improves the current champion or when
+the feature schema changes and the deployed model must be migrated.
 
 ``` text
 Train models
@@ -535,7 +542,6 @@ Planned improvements include:
 -   Replace synthetic history with verified historical observations
 -   Add multiple Lahore stations
 -   Add support for more cities
--   Add wind and precipitation features
 -   Add pollutant-specific features
 -   Add prediction intervals
 -   Add threshold-crossing probabilities
