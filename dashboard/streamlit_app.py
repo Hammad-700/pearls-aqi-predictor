@@ -143,13 +143,17 @@ def get_shap_background(city, _le):
 
 def compute_shap_importance(model, model_type, X_background):
     import shap
-    base_model = model.estimators_[0]
-    if model_type == "lightgbm" or hasattr(base_model, "feature_importances_"):
-        explainer = shap.TreeExplainer(base_model)
-    else:
-        explainer = shap.LinearExplainer(base_model, X_background)
-    shap_values = explainer.shap_values(X_background)
-    return np.abs(shap_values).mean(axis=0)
+    horizon_importances = []
+    for base_model in model.estimators_:
+        if hasattr(base_model, "feature_importances_"):
+            explainer = shap.TreeExplainer(base_model)
+        else:
+            explainer = shap.LinearExplainer(base_model, X_background)
+        shap_values = explainer.shap_values(X_background)
+        if isinstance(shap_values, list):
+            shap_values = shap_values[0]
+        horizon_importances.append(np.abs(shap_values).mean(axis=0))
+    return np.mean(horizon_importances, axis=0)
 
 def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
@@ -354,7 +358,9 @@ feature_labels = {
     "aqi_lag_1h": "AQI 1 Hour Ago",
     "aqi_lag_24h": "AQI 24 Hours Ago",
     "aqi_roll_mean_24h": "24h Rolling Average",
-    "aqi_change_rate": "AQI Change Rate"
+    "aqi_change_rate": "AQI Change Rate",
+    "temperature": "Temperature",
+    "humidity": "Humidity"
 }
 importance_data = {
     "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],

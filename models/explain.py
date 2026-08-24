@@ -68,15 +68,22 @@ def explain(model, X_test):
         import shap
         print("[INFO] Using SHAP explainer...")
 
-        # Ridge is a linear model — use LinearExplainer
-        base_model = model.estimators_[0]
-        explainer = shap.LinearExplainer(base_model, X_test)
-        shap_values = explainer.shap_values(X_test)
+        horizon_importances = []
+        for base_model in model.estimators_:
+            if hasattr(base_model, "feature_importances_"):
+                explainer = shap.TreeExplainer(base_model)
+            else:
+                explainer = shap.LinearExplainer(base_model, X_test)
+            shap_values = explainer.shap_values(X_test)
+            if isinstance(shap_values, list):
+                shap_values = shap_values[0]
+            horizon_importances.append(np.abs(shap_values).mean(axis=0))
+        mean_importance = np.mean(horizon_importances, axis=0)
 
-        print("\n[SHAP] Feature importance for aqi_d1 forecast:")
+        print("\n[SHAP] Mean feature importance across forecast horizons:")
         importance = pd.DataFrame({
             "feature": FEATURE_COLS,
-            "mean_abs_shap": np.abs(shap_values).mean(axis=0)
+            "mean_abs_shap": mean_importance
         }).sort_values("mean_abs_shap", ascending=False)
 
         for _, row in importance.iterrows():
@@ -89,10 +96,15 @@ def explain(model, X_test):
         print(f"[WARN] SHAP failed: {e}")
         print("[INFO] Using fallback: Ridge coefficients as importance...")
 
-        base_model = model.estimators_[0]
+        horizon_importances = []
+        for base_model in model.estimators_:
+            if hasattr(base_model, "feature_importances_"):
+                horizon_importances.append(base_model.feature_importances_)
+            elif hasattr(base_model, "coef_"):
+                horizon_importances.append(np.abs(base_model.coef_))
         importance = pd.DataFrame({
             "feature": FEATURE_COLS,
-            "mean_abs_shap": np.abs(base_model.coef_)
+            "mean_abs_shap": np.mean(horizon_importances, axis=0)
         }).sort_values("mean_abs_shap", ascending=False)
 
         print("\n[FALLBACK] Feature importance for aqi_d1 forecast:")
