@@ -281,9 +281,9 @@ with weather_col:
             <div style="font-size:11px;color:#173b2a;margin-top:4px;font-weight:600;letter-spacing:0.5px">Temperature</div>
         </div>
         <div class="temperature-details">
-            <div class="temperature-details-title" style="font-size:26px;font-weight:700;color:#173b2a">Live temperature</div>
+            <div class="temperature-details-title" style="font-size:26px;font-weight:700;color:#173b2a">Weather</div>
             <div class="temperature-details-location" style="font-size:15px;color:#173b2a;margin-top:6px;opacity:0.8">
-                Lahore - Current Temperature
+                Lahore - Current Weather
             </div>
         </div>
     </div>
