@@ -229,7 +229,7 @@ with aqi_col:
         <div>
             <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
             <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
-                Lahore, Pakistan - Live AQI reading
+                Lahore - Current AQI
             </div>
         </div>
     </div>
@@ -247,7 +247,7 @@ with weather_col:
             {temperature_text}
         </div>
         <div style="font-size:14px;margin-top:4px;opacity:0.75">
-            Lahore, Pakistan - latest reading
+            Lahore
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -256,7 +256,7 @@ st.markdown("<div style='margin:20px 0'></div>", unsafe_allow_html=True)
 
 # Section 1 — Forecast cards
 st.markdown("---")
-st.subheader(f"3-Day Forecast for {city.title()}")
+st.markdown(f"<h2>3-Day Forecast for {city.title()}</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
@@ -283,7 +283,7 @@ spacer()
 
 # Section 2 — Chart
 st.markdown("---")
-st.subheader("Forecast + Recent History")
+st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 fig = go.Figure()
@@ -334,7 +334,7 @@ spacer()
 
 # Section 3 — SHAP
 st.markdown("---")
-st.subheader("What drives AQI predictions?")
+st.markdown("<h2>What drives AQI predictions?</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
