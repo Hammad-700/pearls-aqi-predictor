@@ -33,12 +33,24 @@ def run_pipeline(city: str):
         raise RuntimeError(f"Fetch failed for {city}")
 
     try:
-        supabase.table("aqi_bronze_raw").upsert({
+        bronze_payload = {
             "city": bronze_row["city"],
             "timestamp": bronze_row["timestamp"],
             "raw_data": bronze_row["raw_data"],
             "weather": bronze_row.get("weather", {})
-        }, on_conflict="city,timestamp").execute()
+        }
+        try:
+            supabase.table("aqi_bronze_raw").upsert(
+                bronze_payload, on_conflict="city,timestamp"
+            ).execute()
+        except Exception as e:
+            if "weather" not in str(e) or "column" not in str(e):
+                raise
+            print("[WARN] Bronze table has no weather column; saving without optional weather payload")
+            bronze_payload.pop("weather")
+            supabase.table("aqi_bronze_raw").upsert(
+                bronze_payload, on_conflict="city,timestamp"
+            ).execute()
         print(f"[OK] Bronze saved")
 
         # Staleness check

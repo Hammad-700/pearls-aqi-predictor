@@ -30,22 +30,31 @@ def fetch_weather(start_date, end_date):
         "longitude": LONGITUDE,
         "start_date": start_date.strftime("%Y-%m-%d"),
         "end_date": end_date.strftime("%Y-%m-%d"),
-        "hourly": "temperature_2m,relative_humidity_2m",
+        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,pressure_msl",
         "timezone": "UTC",
     }
     response = requests.get(url, params=params, timeout=60)
     response.raise_for_status()
     hourly = response.json().get("hourly", {})
     weather = {}
-    for timestamp, temperature, humidity in zip(
+    for timestamp, temperature, humidity, wind_speed, wind_direction, precipitation, pressure in zip(
         hourly.get("time", []),
         hourly.get("temperature_2m", []),
         hourly.get("relative_humidity_2m", []),
+        hourly.get("wind_speed_10m", []),
+        hourly.get("wind_direction_10m", []),
+        hourly.get("precipitation", []),
+        hourly.get("pressure_msl", []),
     ):
-        if temperature is not None and humidity is not None:
+        if all(value is not None for value in [temperature, humidity, wind_speed,
+                                               wind_direction, precipitation, pressure]):
             weather[timestamp_key(timestamp)] = {
                 "temperature": float(temperature),
                 "humidity": float(humidity),
+                "wind_speed": float(wind_speed),
+                "wind_direction": float(wind_direction),
+                "precipitation": float(precipitation),
+                "pressure": float(pressure),
             }
     return weather
 
@@ -71,7 +80,7 @@ def update_table(supabase, table, rows, weather):
 def main():
     supabase = get_supabase()
     gold_rows = supabase.table("aqi_gold_features").select(
-        "city,timestamp,temperature,humidity"
+        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure"
     ).eq("city", CITY).not_.is_("aqi_d1", "null").order(
         "timestamp", desc=False
     ).execute().data
@@ -79,7 +88,7 @@ def main():
         raise RuntimeError("No labeled Lahore Gold rows found")
 
     silver_rows = supabase.table("aqi_silver_cleaned").select(
-        "city,timestamp,temperature,humidity"
+        "city,timestamp,temperature,humidity,wind_speed,wind_direction,precipitation,pressure"
     ).eq("city", CITY).order("timestamp", desc=False).execute().data
 
     start = pd.to_datetime(gold_rows[0]["timestamp"], utc=True).date()

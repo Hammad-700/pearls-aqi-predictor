@@ -183,7 +183,7 @@ def run_training():
     print(f"[INFO] Complete weather coverage: {weather_coverage:.1%}")
     if weather_coverage < MIN_WEATHER_COVERAGE:
         raise RuntimeError(
-            f"Only {weather_coverage:.1%} of labeled rows have temperature and humidity; "
+            f"Only {weather_coverage:.1%} of labeled rows have complete weather features; "
             f"need at least {MIN_WEATHER_COVERAGE:.0%} before training"
         )
 
