@@ -8,7 +8,7 @@ I built this project to predict Air Quality Index (AQI) for the next 3 days usin
 
 ## What it actually does
 
-Every hour, a GitHub Actions job fetches live AQI data for Lahore and stores it in Supabase. Every day, another job retrains 4 ML models and picks the best one automatically. The Streamlit dashboard reads from Supabase and shows a 3-day forecast with a color-coded alert banner.
+Every hour, a GitHub Actions job fetches live AQI data for Lahore and stores it in Supabase. Every day, another job retrains 5 ML models and picks the best one automatically. The Streamlit dashboard reads from Supabase and shows a 3-day forecast with a color-coded alert banner.
 
 The full flow:
 
@@ -18,7 +18,9 @@ AQICN API → Bronze (raw) → Silver (cleaned) → Gold (features) → Model �
 
 All three data layers live in Supabase Postgres. The trained model is saved to Supabase Storage so the dashboard can load it without retraining.
 
-Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) - updated every 4-6 hours.
+AQI comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan). Temperature and humidity come from Lahore, Pakistan coordinates through Open-Meteo.
+
+Latest verified reading: **AQI 97**, **35.0°C**, **53% humidity** at **2026-08-24 15:00 PKT**.
 
 ![AQI system architecture](images/AQI-Architecture.png)
 
@@ -28,7 +30,7 @@ Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) - update
 
 - **Python 3.14.7** - developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
 - **Scikit-learn, XGBoost, LightGBM** - five models trained and compared every day (including naive baseline)
-- **Feature Importance** - built-in LightGBM importances to explain predictions
+- **Explainability** - SHAP feature importance for model predictions
 - **Supabase** - Postgres for data storage, Storage bucket as model registry
 - **Flask** - REST API with `/predict`, `/history`, `/health` endpoints (local)
 - **Streamlit** - live dashboard deployed on Streamlit Cloud
@@ -40,7 +42,7 @@ Data comes from station **@A471607** (G.O.R., Lahore, Punjab, Pakistan) - update
 
 I used the medallion architecture to keep data clean and traceable:
 
-- **Bronze** (`aqi_bronze_raw`) - raw JSON from the API, nothing touched
+- **Bronze** (`aqi_bronze_raw`) - fetched AQICN JSON with Lahore weather values attached
 - **Silver** (`aqi_silver_cleaned`) - nulls handled, negative values dropped, types validated
 - **Gold** (`aqi_gold_features`) - lag features, rolling stats, time features, and the 3 forecast targets
 
@@ -54,23 +56,23 @@ Trained all 5 models on the same features with a **chronological train/test spli
 
 | Model | Avg RMSE | Notes |
 |-------|----------|-------|
-| Naive Baseline | 30.77 | predict mean — no skill |
-| Random Forest | 11.44 | ✅ Champion (real data) |
-| LightGBM | 12.60 | previous champion (mixed data) |
-| Ridge Regression | 13.44 | |
-| XGBoost | 14.23 | |
+| Naive Baseline | 20.31 | predict mean — no skill |
+| Random Forest | 11.32 | best new candidate; current champion remains 11.29 |
+| LightGBM | 11.88 | |
+| Ridge Regression | 12.59 | |
+| XGBoost | 11.94 | |
 
-**Random Forest beats the naive baseline by 63%** — clear evidence the model adds real value.
+**Random Forest reduces RMSE by about 44% versus the naive baseline** — a useful result on the current evaluation data.
 
-Champion was updated from LightGBM (RMSE 12.60) to Random Forest (RMSE 11.44) after synthetic backfill data was removed and model retrained on real Lahore AQI data only (Aug 12–21, 2026).
+Champion is Random Forest with an average RMSE of 11.29. The current training data has complete weather coverage, but historical AQI labels still include backfilled data and should be replaced with a longer period of real observations before treating these metrics as production accuracy.
 
 Per-horizon breakdown for Random Forest champion:
 
 | Day | RMSE | R² |
 |-----|------|----|
-| Day 1 | 13.02 | 0.82 |
-| Day 2 | 11.76 | 0.85 |
-| Day 3 | 13.73 | 0.80 |
+| Day 1 | 12.02 | 0.63 |
+| Day 2 | 11.01 | 0.69 |
+| Day 3 | 10.85 | 0.73 |
 
 Champion gate is in place — model only gets promoted if it beats the existing champion's RMSE.
 
@@ -82,8 +84,10 @@ Champion gate is in place — model only gets promoted if it beats the existing 
 | `aqi_lag_24h` | AQI yesterday same time |
 | `aqi_roll_mean_24h` | Average over last 24 hours |
 | `aqi_change_rate` | How fast AQI is changing |
-| `hour`, `day_of_week`, `month` | Time patterns (UTC) |
+| `hour`, `day_of_week`, `month` | Time patterns (Pakistan time) |
 | `city_encoded` | City identifier |
+| `temperature` | Lahore temperature in °C |
+| `humidity` | Lahore relative humidity percentage |
 
 LightGBM feature importance shows `aqi_lag_1h` and `aqi_roll_mean_24h` are the strongest predictors - recent AQI history matters most.
 
@@ -164,10 +168,9 @@ pearls-aqi-predictor/
 │   └── app.py
 ├── dashboard/
 │   └── streamlit_app.py
-├── tests/
-│   ├── test_supabase.py
-│   ├── check_stations.py
-│   └── health_check.py
+├── test/
+│   ├── test_features.py
+│   └── check_stations.py
 ├── requirements.txt
 └── README.md
 ```
@@ -179,9 +182,9 @@ pearls-aqi-predictor/
 - **Chronological split** - time series data requires time-aware train/test split, not random shuffle
 - **Champion gate** - new model only promoted if it beats existing champion RMSE
 - **Staleness detection** - pipeline warns if station data is older than 6 hours
-- **UTC everywhere** - all timestamps stored in UTC, converted to PKT only for display
+- **UTC storage and PKT features** - timestamps are stored in UTC; calendar features and display use Pakistan time
 - **Composite key (city, timestamp)** - prevents duplicate rows at DB level
-- **Naive baseline included** - proves model adds real value (59% better than mean predictor)
+- **Naive baseline included** - current champion reduces RMSE by about 44% versus the mean predictor
 
 ---
 
