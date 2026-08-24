@@ -263,17 +263,17 @@ col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
-    <div style="background-color:{color};border-radius:14px;padding:20px 18px;
-        height:166px;box-sizing:border-box;margin:4px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
-            <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
-                padding:12px 14px;text-align:center;min-width:86px">
-                <div style="font-size:38px;font-weight:800;color:black;line-height:1;white-space:nowrap">{f['aqi']}</div>
-                <div style="font-size:11px;color:black;margin-top:4px;font-weight:600">AQI</div>
-            </div>
-            <div style="text-align:right;color:black">
-                <div style="font-size:16px;font-weight:700">{label}</div>
-                <div style="font-size:13px;font-weight:600;margin-top:8px;opacity:0.8">{f['date']}</div>
+    <div style="background-color:{color};border-radius:14px;padding:20px 28px;
+        display:flex;align-items:center;gap:24px;height:166px;box-sizing:border-box;margin:4px">
+        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
+            padding:14px 20px;text-align:center;min-width:110px">
+            <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{f['aqi']}</div>
+            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
+        </div>
+        <div style="color:black">
+            <div style="font-size:26px;font-weight:700">{label}</div>
+            <div style="font-size:15px;margin-top:6px;opacity:0.8">
+                Lahore, Pakistan - {f['date']}
             </div>
         </div>
     </div>
