@@ -88,7 +88,7 @@ def predict(city, model, le):
         .select("*").eq("city", city)\
         .order("timestamp", desc=True).limit(1).execute()
     if not result.data:
-        return None, None, None
+        return None, None, None, None
     row = result.data[0]
     city_encoded = int(le.transform([city])[0])
     features = {
@@ -114,7 +114,7 @@ def predict(city, model, le):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    return forecast, row["timestamp"], row.get("aqi", 0)
+    return forecast, row["timestamp"], row.get("aqi", 0), row.get("temperature")
 
 def get_history(city):
     sb = get_supabase()
@@ -186,7 +186,7 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of, current_aqi = predict(city, model, le)
+    forecast, as_of, current_aqi, current_temperature = predict(city, model, le)
     history = get_history(city)
 
 # Staleness check + Pakistan Time
@@ -212,23 +212,41 @@ st.markdown(
 max_aqi = max(f["aqi"] for f in forecast)
 alert_label, alert_color = get_alert(current_aqi)
 
-# --- FIXED: added white-space:nowrap and increased min-width to 110px ---
-st.markdown(f"""
-<div style="background-color:{alert_color};border-radius:14px;padding:20px 28px;
-    display:flex;align-items:center;gap:24px;margin:10px 0 30px 0">
-    <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
-        padding:14px 20px;text-align:center;min-width:110px">
-        <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
-        <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
-    </div>
-    <div>
-        <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
-        <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
-            🌍 Lahore, Pakistan — Live AQI reading
+aqi_col, weather_col = st.columns(2)
+with aqi_col:
+    st.markdown(f"""
+    <div style="background-color:{alert_color};border-radius:14px;padding:20px 28px;
+        display:flex;align-items:center;gap:24px;min-height:126px">
+        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
+            padding:14px 20px;text-align:center;min-width:110px">
+            <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
+            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
+        </div>
+        <div>
+            <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
+            <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
+                Lahore, Pakistan - Live AQI reading
+            </div>
         </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+with weather_col:
+    temperature_text = f"{float(current_temperature):.1f}°C" if current_temperature is not None else "Unavailable"
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
+        padding:20px 28px;min-height:126px;color:#173b2a">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px">
+            Live temperature
+        </div>
+        <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:12px;white-space:nowrap">
+            {temperature_text}
+        </div>
+        <div style="font-size:14px;margin-top:4px;opacity:0.75">
+            Lahore, Pakistan - latest reading
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("<div style='margin:20px 0'></div>", unsafe_allow_html=True)
 
