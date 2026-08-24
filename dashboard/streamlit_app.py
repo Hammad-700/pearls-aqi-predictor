@@ -219,19 +219,17 @@ alert_label, alert_color = get_alert(current_aqi)
 aqi_col, weather_col = st.columns(2)
 with aqi_col:
     st.markdown(f"""
-    <div style="background-color:{alert_color};border-radius:14px;padding:20px 28px;
-        display:flex;align-items:center;gap:24px;height:166px;box-sizing:border-box;margin-bottom:16px">
-        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
-            padding:14px 20px;text-align:center;min-width:110px">
-            <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
-            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
+    <div style="background-color:rgba(255,255,255,0.05);border-radius:14px;padding:20px;
+        border:1px solid {alert_color};text-align:center;height:166px;box-sizing:border-box;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:600;color:inherit;margin-bottom:12px">
+            Live AQI
         </div>
-        <div>
-            <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
-            <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
-                Lahore, Pakistan - Live AQI reading
-            </div>
+        <div style="background-color:{alert_color}33;border-radius:10px;padding:12px;display:inline-block;min-width:110px">
+            <div style="font-size:44px;font-weight:800;color:{alert_color};line-height:1;white-space:nowrap">{current_aqi}</div>
+            <div style="font-size:11px;color:inherit;margin-top:4px;font-weight:600">US AQI</div>
         </div>
+        <div style="margin-top:12px;padding:8px;border-radius:8px;
+            background:{alert_color};color:black;font-size:16px;font-weight:700">{alert_label}</div>
     </div>
     """, unsafe_allow_html=True)
 
