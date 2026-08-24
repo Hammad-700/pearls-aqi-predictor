@@ -270,7 +270,7 @@ with aqi_col:
 with weather_col:
     if current_temperature is not None:
         temperature_value = float(current_temperature)
-        temperature_number = f"{temperature_value:.1f}".rstrip("0").rstrip(".")
+        temperature_number = f"{temperature_value:.0f}"
         temperature_text = f"{temperature_number}°C"
     else:
         temperature_text = "Unavailable"
