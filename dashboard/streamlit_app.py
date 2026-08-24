@@ -268,7 +268,12 @@ with aqi_col:
     """, unsafe_allow_html=True)
 
 with weather_col:
-    temperature_text = f"{float(current_temperature):.1f}°C" if current_temperature is not None else "Unavailable"
+    if current_temperature is not None:
+        temperature_value = float(current_temperature)
+        temperature_number = f"{temperature_value:.1f}".rstrip("0").rstrip(".")
+        temperature_text = f"{temperature_number}°C"
+    else:
+        temperature_text = "Unavailable"
     st.markdown(f"""
     <div class="temperature-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
         padding:20px 28px;display:flex;align-items:center;gap:24px;height:166px;
