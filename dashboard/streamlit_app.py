@@ -219,17 +219,19 @@ alert_label, alert_color = get_alert(current_aqi)
 aqi_col, weather_col = st.columns(2)
 with aqi_col:
     st.markdown(f"""
-    <div style="background-color:rgba(255,255,255,0.05);border-radius:14px;padding:20px;
-        border:1px solid {alert_color};text-align:center;height:166px;box-sizing:border-box;margin-bottom:16px">
-        <div style="font-size:15px;font-weight:600;color:inherit;margin-bottom:12px">
-            Live AQI
+    <div style="background-color:{alert_color};border-radius:14px;padding:20px 28px;
+        display:flex;align-items:center;gap:24px;height:166px;box-sizing:border-box;margin-bottom:16px">
+        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
+            padding:14px 20px;text-align:center;min-width:110px">
+            <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
+            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
         </div>
-        <div style="background-color:{alert_color}33;border-radius:10px;padding:12px;display:inline-block;min-width:110px">
-            <div style="font-size:44px;font-weight:800;color:{alert_color};line-height:1;white-space:nowrap">{current_aqi}</div>
-            <div style="font-size:11px;color:inherit;margin-top:4px;font-weight:600">US AQI</div>
+        <div>
+            <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
+            <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
+                Lahore, Pakistan - Live AQI reading
+            </div>
         </div>
-        <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{alert_color};color:black;font-size:16px;font-weight:700">{alert_label}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -260,17 +262,18 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
-    # --- FIXED: added white-space:nowrap and increased min-width to 110px ---
     col.markdown(f"""
-    <div style="background-color:rgba(255,255,255,0.05);border-radius:14px;padding:20px;
-        border:1px solid {color};text-align:center;margin:4px">
-        <div style="font-size:15px;font-weight:600;color:inherit;margin-bottom:12px">{f['date']}</div>
-        <div style="background-color:{color}33;border-radius:10px;padding:12px;display:inline-block;min-width:110px">
-            <div style="font-size:44px;font-weight:800;color:{color};line-height:1;white-space:nowrap">{f['aqi']}</div>
-            <div style="font-size:11px;color:inherit;margin-top:4px;font-weight:600">US AQI</div>
+    <div style="background-color:{color};border-radius:14px;padding:20px 18px;
+        display:flex;align-items:center;gap:14px;height:166px;box-sizing:border-box;margin:4px">
+        <div style="font-size:15px;font-weight:600;color:black;min-width:72px;text-align:center">
+            {f['date']}
         </div>
-        <div style="margin-top:12px;padding:8px;border-radius:8px;
-            background:{color};color:black;font-size:16px;font-weight:700">{label}</div>
+        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
+            padding:12px 14px;text-align:center;min-width:86px">
+            <div style="font-size:38px;font-weight:800;color:black;line-height:1;white-space:nowrap">{f['aqi']}</div>
+            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600">AQI</div>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:black">{label}</div>
     </div>
     """, unsafe_allow_html=True)
 
