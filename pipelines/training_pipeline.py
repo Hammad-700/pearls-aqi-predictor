@@ -35,9 +35,11 @@ except ImportError:
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-                "aqi_change_rate", "temperature", "humidity", "pm25"]
+                "aqi_change_rate", "temperature", "humidity", "pm25",
+                "wind_speed", "wind_direction", "precipitation", "pressure"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
-WEATHER_COLS = ["temperature", "humidity"]
+WEATHER_COLS = ["temperature", "humidity", "wind_speed", "wind_direction",
+                "precipitation", "pressure"]
 MIN_WEATHER_COVERAGE = 0.80
 
 
@@ -232,11 +234,15 @@ def run_training():
         
         if existing.data:
             existing_rmse = existing.data[0]["metrics"].get("avg_rmse", 999)
+            existing_features = existing.data[0].get("feature_columns") or []
             new_rmse = champion["metrics"]["avg_rmse"]
             print(f"\n[GATE] Existing RMSE: {existing_rmse:.2f} | New RMSE: {new_rmse:.2f}")
             
-            if new_rmse < existing_rmse:
-                print(f"[GATE] New model is better — promoting to champion!")
+            if existing_features != FEATURE_COLS or new_rmse < existing_rmse:
+                if existing_features != FEATURE_COLS:
+                    print("[GATE] Feature schema changed — promoting new model to champion!")
+                else:
+                    print(f"[GATE] New model is better — promoting to champion!")
                 version = f"v{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}"
                 save_champion(champion["model"], le, version, champion["metrics"], champion_name)
                 print(f"\n[DONE] New champion saved! Version: {version}")

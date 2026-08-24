@@ -3,6 +3,7 @@ import os
 import json
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from features.fetch_weather import fetch_weather_lahore
 
 load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
@@ -21,22 +22,6 @@ PAKISTAN_LAHORE = {
     "lon": 74.3587,
     "radius_deg": 3.0,
 }
-
-
-def fetch_lahore_weather() -> dict:
-    url = (
-        "https://api.open-meteo.com/v1/forecast"
-        "?latitude=31.5204&longitude=74.3587"
-        "&current=temperature_2m,relative_humidity_2m"
-        "&timezone=Asia%2FKarachi"
-    )
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    current = response.json().get("current", {})
-    return {
-        "temperature": float(current["temperature_2m"]),
-        "humidity": float(current["relative_humidity_2m"]),
-    }
 
 
 def station_matches_lahore_pakistan(data: dict) -> bool:
@@ -79,12 +64,13 @@ def fetch_aqi(city: str) -> dict:
 
         if city.lower() == "lahore":
             try:
-                weather = fetch_lahore_weather()
-                data["data"].setdefault("iaqi", {})["t"] = {"v": weather["temperature"]}
-                data["data"]["iaqi"]["h"] = {"v": weather["humidity"]}
+                weather = fetch_weather_lahore()
                 print(f"[OK] Lahore weather: {weather['temperature']}C, {weather['humidity']}% humidity")
-            except (requests.exceptions.RequestException, KeyError, TypeError, ValueError) as e:
-                print(f"[WARN] Lahore weather fetch failed: {e}; using AQICN weather values")
+            except Exception as e:
+                print(f"[WARN] Lahore weather fetch failed: {e}")
+                weather = {}
+        else:
+            weather = {}
 
         # Use station's own reading time (not fetch time)
         station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
@@ -103,6 +89,7 @@ def fetch_aqi(city: str) -> dict:
             "city": city,
             "timestamp": timestamp,
             "raw_data": data["data"],
+            "weather": weather,
         }
 
         print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']} (reading time: {timestamp[:16]})")

@@ -14,7 +14,8 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-                "aqi_change_rate", "temperature", "humidity"]
+                "aqi_change_rate", "temperature", "humidity", "pm25",
+                "wind_speed", "wind_direction", "precipitation", "pressure"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
 
 def load_champion():
@@ -47,7 +48,7 @@ def load_champion():
 
     return model, le, meta
 
-def load_test_data(le):
+def load_test_data(le, feature_cols):
     result = supabase.table("aqi_gold_features")\
         .select("*")\
         .not_.is_("aqi_d1", "null")\
@@ -55,15 +56,15 @@ def load_test_data(le):
         .execute()
     df = pd.DataFrame(result.data)
     df["city_encoded"] = le.transform(df["city"])
-    for col in FEATURE_COLS:
+    for col in feature_cols:
         if col == "city_encoded":
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
-    df = df.dropna(subset=FEATURE_COLS)
+    df = df.dropna(subset=feature_cols)
     split = int(len(df) * 0.8)
-    return df[FEATURE_COLS].iloc[split:]
+    return df[feature_cols].iloc[split:]
 
-def explain(model, X_test):
+def explain(model, X_test, feature_cols):
     try:
         import shap
         print("[INFO] Using SHAP explainer...")
@@ -82,7 +83,7 @@ def explain(model, X_test):
 
         print("\n[SHAP] Mean feature importance across forecast horizons:")
         importance = pd.DataFrame({
-            "feature": FEATURE_COLS,
+            "feature": feature_cols,
             "mean_abs_shap": mean_importance
         }).sort_values("mean_abs_shap", ascending=False)
 
@@ -103,7 +104,7 @@ def explain(model, X_test):
             elif hasattr(base_model, "coef_"):
                 horizon_importances.append(np.abs(base_model.coef_))
         importance = pd.DataFrame({
-            "feature": FEATURE_COLS,
+            "feature": feature_cols,
             "mean_abs_shap": np.mean(horizon_importances, axis=0)
         }).sort_values("mean_abs_shap", ascending=False)
 
@@ -117,7 +118,8 @@ def explain(model, X_test):
 if __name__ == "__main__":
     model, le, meta = load_champion()
     if model:
-        X_test = load_test_data(le)
+        feature_cols = meta.get("feature_columns") or FEATURE_COLS
+        X_test = load_test_data(le, feature_cols)
         print(f"[INFO] Explaining on {len(X_test)} test rows")
-        importance = explain(model, X_test)
+        importance = explain(model, X_test, feature_cols)
         print("\n[DONE] Explainability complete!")

@@ -19,6 +19,7 @@ GOLD_COLS = [
     "city", "timestamp", "aqi", "hour", "day_of_week",
     "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
     "aqi_change_rate", "temperature", "humidity", "pm25",
+    "wind_speed", "wind_direction", "precipitation", "pressure",
     "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
@@ -35,7 +36,8 @@ def run_pipeline(city: str):
         supabase.table("aqi_bronze_raw").upsert({
             "city": bronze_row["city"],
             "timestamp": bronze_row["timestamp"],
-            "raw_data": bronze_row["raw_data"]
+            "raw_data": bronze_row["raw_data"],
+            "weather": bronze_row.get("weather", {})
         }, on_conflict="city,timestamp").execute()
         print(f"[OK] Bronze saved")
 
@@ -105,6 +107,10 @@ def run_pipeline(city: str):
                 "temperature": silver_row.get("temperature"),
                 "humidity": silver_row.get("humidity"),
                 "pm25": silver_row.get("pm25"),
+                "wind_speed": silver_row.get("wind_speed"),
+                "wind_direction": silver_row.get("wind_direction"),
+                "precipitation": silver_row.get("precipitation"),
+                "pressure": silver_row.get("pressure"),
                 "aqi_d1": None,
                 "aqi_d2": None,
                 "aqi_d3": None,

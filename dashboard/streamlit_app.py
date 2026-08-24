@@ -118,7 +118,8 @@ def get_alert(aqi):
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-                "aqi_change_rate", "temperature", "humidity", "pm25"]
+                "aqi_change_rate", "temperature", "humidity", "pm25",
+                "wind_speed", "wind_direction", "precipitation", "pressure"]
 LEGACY_FEATURE_COLS = FEATURE_COLS[:-1]
 
 def predict(city, model, le, feature_cols):
@@ -142,6 +143,10 @@ def predict(city, model, le, feature_cols):
         "temperature": float(row.get("temperature")) if row.get("temperature") is not None else 0.0,
         "humidity": float(row.get("humidity")) if row.get("humidity") is not None else 0.0,
         "pm25": row.get("pm25") or 0,
+        "wind_speed": row.get("wind_speed") or 0,
+        "wind_direction": row.get("wind_direction") or 0,
+        "precipitation": row.get("precipitation") or 0,
+        "pressure": row.get("pressure") or 0,
     }
     X = pd.DataFrame([features])[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
     preds = model.predict(X)[0]
