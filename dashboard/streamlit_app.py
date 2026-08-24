@@ -39,20 +39,29 @@ h1 + div p {
 
 @media (max-width: 768px) {
     .temperature-card {
-        height: auto !important;
-        min-height: 166px;
-        flex-direction: column;
-        align-items: flex-start !important;
+        flex-direction: row;
+        align-items: center !important;
         gap: 12px !important;
         padding: 16px 20px !important;
     }
 
+    .temperature-value-box {
+        flex: 0 0 145px;
+        min-width: 0 !important;
+        padding: 12px 8px !important;
+    }
+
+    .temperature-value {
+        font-size: 36px !important;
+    }
+
     .temperature-details {
+        flex: 1;
         min-width: 0;
     }
 
     .temperature-details-title {
-        font-size: 22px !important;
+        font-size: 20px !important;
     }
 
     .temperature-details-location {
@@ -264,9 +273,9 @@ with weather_col:
     <div class="temperature-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
         padding:20px 28px;display:flex;align-items:center;gap:24px;height:166px;
         box-sizing:border-box;color:#173b2a;margin-bottom:16px">
-        <div style="background-color:rgba(0,0,0,0.08);border-radius:10px;
+        <div class="temperature-value-box" style="background-color:rgba(0,0,0,0.08);border-radius:10px;
             padding:14px 20px;text-align:center;min-width:110px">
-            <div style="font-size:44px;font-weight:800;color:#173b2a;line-height:1;white-space:nowrap">
+            <div class="temperature-value" style="font-size:44px;font-weight:800;color:#173b2a;line-height:1;white-space:nowrap">
                 {temperature_text}
             </div>
             <div style="font-size:11px;color:#173b2a;margin-top:4px;font-weight:600;letter-spacing:0.5px">Temperature</div>
