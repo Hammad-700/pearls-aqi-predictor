@@ -273,7 +273,7 @@ for col, f in zip([col1, col2, col3], forecast):
         <div style="color:black">
             <div style="font-size:26px;font-weight:700">{label}</div>
             <div style="font-size:15px;margin-top:6px;opacity:0.8">
-                Lahore, Pakistan - {f['date']}
+             {f['date']}
             </div>
         </div>
     </div>
