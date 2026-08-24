@@ -34,7 +34,8 @@ except ImportError:
     print("[WARN] LightGBM not available - using HistGradientBoosting fallback")
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
-                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h", "aqi_change_rate"]
+                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
+                "aqi_change_rate", "temperature", "humidity"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
 
 
@@ -64,7 +65,13 @@ def load_gold_data():
 def prepare_data(df):
     le = LabelEncoder()
     df["city_encoded"] = le.fit_transform(df["city"])
-    df = df.dropna(subset=FEATURE_COLS + TARGET_COLS)
+
+    for col in FEATURE_COLS:
+        if col in ["city_encoded"]:
+            continue
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
+
+    df = df.dropna(subset=TARGET_COLS)
     df = df.sort_values("timestamp").reset_index(drop=True)
     X = df[FEATURE_COLS]
     y = df[TARGET_COLS]

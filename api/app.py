@@ -19,7 +19,8 @@ CORS(app)
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
-                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h", "aqi_change_rate"]
+                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
+                "aqi_change_rate", "temperature", "humidity"]
 
 model = None
 le = None
@@ -115,9 +116,11 @@ def predict():
             "aqi_lag_24h": row.get("aqi_lag_24h") or 0,
             "aqi_roll_mean_24h": row.get("aqi_roll_mean_24h") or 0,
             "aqi_change_rate": row.get("aqi_change_rate") or 0,
+            "temperature": float(row.get("temperature")) if row.get("temperature") is not None else 0.0,
+            "humidity": float(row.get("humidity")) if row.get("humidity") is not None else 0.0,
         }
 
-        X = pd.DataFrame([features])[FEATURE_COLS]
+        X = pd.DataFrame([features])[FEATURE_COLS].apply(pd.to_numeric, errors="coerce").fillna(0)
         preds = model.predict(X)[0]
 
         as_of = row["timestamp"]

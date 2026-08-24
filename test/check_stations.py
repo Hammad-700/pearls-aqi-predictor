@@ -1,51 +1,25 @@
-import requests
-import os
-from datetime import datetime, timezone
+import requests, os
 from dotenv import load_dotenv
-
 load_dotenv()
-
-token = os.getenv("AQICN_TOKEN")
+token = os.getenv('AQICN_TOKEN')
 
 stations = [
-    "@A471607",
-    "@A471608",
-    "@A471609",
-    "@A471610",
-    "@A471611",
-    "@A471612",
-    "@A471613",
-    "@A471614",
-    "@A471615",
+    'berlin',
+    'berlin-wedding',
+    'berlin-neukölln', 
+    'berlin-tempelhof',
+    '@A228',
+    '@A229',
+    '@A230',
 ]
 
-for station_id in stations:
-
-    url = f"https://api.waqi.info/feed/{station_id}/?token={token}"
-
-    try:
-        response = requests.get(url, timeout=10)
-        data = response.json()
-
-        if data.get("status") != "ok":
-            print(f"❌ {station_id} → inactive / unavailable")
-            continue
-
-        station = data["data"]
-
-        aqi = station.get("aqi")
-        name = station["city"]["name"]
-        update_time = station["time"].get("iso")
-
-        if aqi == "-":
-            print(f"⚠️ {station_id} | {name} | No AQI")
-        else:
-            print(
-                f"✅ {station_id} | "
-                f"{name} | "
-                f"AQI={aqi} | "
-                f"Updated={update_time}"
-            )
-
-    except Exception as e:
-        print(f"❌ {station_id} → ERROR: {e}")
+for s in stations:
+    r = requests.get(f'https://api.waqi.info/feed/{s}/?token={token}')
+    d = r.json()
+    if d['status'] == 'ok' and d['data']['aqi'] != '-':
+        name = d['data']['city']['name']
+        aqi = d['data']['aqi']
+        time = d['data']['time'].get('s', 'unknown')
+        print(f"{s}: {name} | AQI={aqi} | Time={time}")
+    else:
+        print(f"{s}: not found or no data")

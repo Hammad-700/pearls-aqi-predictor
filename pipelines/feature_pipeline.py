@@ -18,7 +18,8 @@ supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 GOLD_COLS = [
     "city", "timestamp", "aqi", "hour", "day_of_week",
     "month", "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-    "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"
+    "aqi_change_rate", "temperature", "humidity",
+    "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
 
@@ -98,13 +99,15 @@ def run_pipeline(city: str):
                 "city": silver_row["city"],
                 "timestamp": silver_row["timestamp"],
                 "aqi": silver_row["aqi"],
-                "hour": ts_pkt.hour,                 # ← changed
-                "day_of_week": ts_pkt.weekday(),     # ← changed
-                "month": ts_pkt.month,               # ← changed
+                "hour": ts_pkt.hour,
+                "day_of_week": ts_pkt.weekday(),
+                "month": ts_pkt.month,
                 "aqi_lag_1h": None,
                 "aqi_lag_24h": None,
                 "aqi_roll_mean_24h": None,
                 "aqi_change_rate": None,
+                "temperature": silver_row.get("temperature"),
+                "humidity": silver_row.get("humidity"),
                 "aqi_d1": None,
                 "aqi_d2": None,
                 "aqi_d3": None,

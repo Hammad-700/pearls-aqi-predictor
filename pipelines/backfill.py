@@ -18,7 +18,8 @@ TOKEN = os.getenv("AQICN_TOKEN")
 GOLD_COLS = [
     "city", "timestamp", "aqi", "hour", "day_of_week", "month",
     "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-    "aqi_change_rate", "aqi_d1", "aqi_d2", "aqi_d3"
+    "aqi_change_rate", "temperature", "humidity",
+    "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
 CITY_MAP = {
@@ -97,6 +98,9 @@ def build_gold_from_rows(rows: list, idx: int) -> dict | None:
     prev_aqi = df.iloc[-2]["aqi"]
     latest["aqi_change_rate"] = float(latest["aqi"] - prev_aqi) if prev_aqi is not None else None
 
+    latest["temperature"] = float(df.iloc[-1].get("temperature")) if pd.notna(df.iloc[-1].get("temperature")) else None
+    latest["humidity"] = float(df.iloc[-1].get("humidity")) if pd.notna(df.iloc[-1].get("humidity")) else None
+
     latest["aqi_d1"] = None
     latest["aqi_d2"] = None
     latest["aqi_d3"] = None
@@ -145,6 +149,8 @@ def run_backfill(city: str, days: int = 30):
             "o3": None,
             "co": None,
             "so2": None,
+            "temperature": round(random.uniform(20, 35), 1),
+            "humidity": round(random.uniform(40, 80), 1),
         })
         current += timedelta(hours=1)
 

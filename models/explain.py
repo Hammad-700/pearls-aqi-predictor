@@ -13,7 +13,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
-                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h", "aqi_change_rate"]
+                "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
+                "aqi_change_rate", "temperature", "humidity"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
 
 def load_champion():
@@ -54,6 +55,10 @@ def load_test_data(le):
         .execute()
     df = pd.DataFrame(result.data)
     df["city_encoded"] = le.transform(df["city"])
+    for col in FEATURE_COLS:
+        if col == "city_encoded":
+            continue
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
     df = df.dropna(subset=FEATURE_COLS)
     split = int(len(df) * 0.8)
     return df[FEATURE_COLS].iloc[split:]

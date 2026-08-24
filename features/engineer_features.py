@@ -29,6 +29,8 @@ def clean_to_silver(bronze_row: dict) -> dict:
             "o3": safe_get("o3"),
             "co": safe_get("co"),
             "so2": safe_get("so2"),
+            "temperature": safe_get("t"),
+            "humidity": safe_get("h"),
         }
     except Exception as e:
         print(f"[ERROR] Silver cleaning failed: {e}")
@@ -69,6 +71,9 @@ def build_gold_features(silver_rows: list) -> dict:
     # Change rate
     prev_aqi = df.iloc[-2]["aqi"]
     latest["aqi_change_rate"] = float(latest["aqi"] - prev_aqi) if prev_aqi else None
+
+    latest["temperature"] = float(df.iloc[-1].get("temperature")) if pd.notna(df.iloc[-1].get("temperature")) else None
+    latest["humidity"] = float(df.iloc[-1].get("humidity")) if pd.notna(df.iloc[-1].get("humidity")) else None
 
     # Placeholders
     latest["aqi_d1"] = None
