@@ -112,7 +112,7 @@ def get_alert(aqi):
 
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
-                "aqi_change_rate", "temperature", "humidity"]
+                "aqi_change_rate", "temperature", "humidity", "pm25"]
 
 def predict(city, model, le):
     sb = get_supabase()
@@ -134,6 +134,7 @@ def predict(city, model, le):
         "aqi_change_rate": row.get("aqi_change_rate") or 0,
         "temperature": float(row.get("temperature")) if row.get("temperature") is not None else 0.0,
         "humidity": float(row.get("humidity")) if row.get("humidity") is not None else 0.0,
+        "pm25": row.get("pm25") or 0,
     }
     X = pd.DataFrame([features])[FEATURE_COLS].apply(pd.to_numeric, errors="coerce").fillna(0)
     preds = model.predict(X)[0]

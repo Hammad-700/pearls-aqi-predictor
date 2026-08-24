@@ -74,6 +74,7 @@ def build_gold_features(silver_rows: list) -> dict:
 
     latest["temperature"] = float(df.iloc[-1].get("temperature")) if pd.notna(df.iloc[-1].get("temperature")) else None
     latest["humidity"] = float(df.iloc[-1].get("humidity")) if pd.notna(df.iloc[-1].get("humidity")) else None
+    latest["pm25"] = float(df.iloc[-1].get("pm25")) if pd.notna(df.iloc[-1].get("pm25")) else None
 
     # Placeholders
     latest["aqi_d1"] = None
