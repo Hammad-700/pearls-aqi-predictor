@@ -265,17 +265,15 @@ for col, f in zip([col1, col2, col3], forecast):
     col.markdown(f"""
     <div style="background-color:{color};border-radius:14px;padding:20px 18px;
         height:166px;box-sizing:border-box;margin:4px">
-        <div style="font-size:15px;font-weight:600;color:black;text-align:center;margin-bottom:14px">
-            {f['date']}
-        </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
             <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
                 padding:12px 14px;text-align:center;min-width:86px">
                 <div style="font-size:38px;font-weight:800;color:black;line-height:1;white-space:nowrap">{f['aqi']}</div>
                 <div style="font-size:11px;color:black;margin-top:4px;font-weight:600">AQI</div>
             </div>
-            <div style="font-size:16px;font-weight:700;color:black;text-align:right">
-                {label}
+            <div style="text-align:right;color:black">
+                <div style="font-size:16px;font-weight:700">{label}</div>
+                <div style="font-size:13px;font-weight:600;margin-top:8px;opacity:0.8">{f['date']}</div>
             </div>
         </div>
     </div>
