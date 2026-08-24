@@ -216,7 +216,7 @@ aqi_col, weather_col = st.columns(2)
 with aqi_col:
     st.markdown(f"""
     <div style="background-color:{alert_color};border-radius:14px;padding:20px 28px;
-        display:flex;align-items:center;gap:24px;min-height:126px">
+        display:flex;align-items:center;gap:24px;height:166px;box-sizing:border-box">
         <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
             padding:14px 20px;text-align:center;min-width:110px">
             <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{current_aqi}</div>
@@ -235,7 +235,7 @@ with weather_col:
     temperature_text = f"{float(current_temperature):.1f}°C" if current_temperature is not None else "Unavailable"
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
-        padding:20px 28px;min-height:126px;color:#173b2a">
+        padding:20px 28px;height:166px;box-sizing:border-box;color:#173b2a">
         <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px">
             Live temperature
         </div>
