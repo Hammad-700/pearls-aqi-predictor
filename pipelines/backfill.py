@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import random
+import requests
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from supabase import create_client
@@ -22,19 +23,50 @@ GOLD_COLS = [
     "aqi_d1", "aqi_d2", "aqi_d3"
 ]
 
+# Keep the current station as the default for compatibility with the existing scheduled job,
+# while allowing an explicit override to a verified Lahore, Pakistan station.
 CITY_MAP = {
-    "lahore": "@A471607"
+    "lahore": os.getenv("LAHORE_AQI_STATION_ID", "@A471607"),
 }
+
+PAKISTAN_LAHORE = {
+    "lat": 31.5204,
+    "lon": 74.3587,
+    "radius_deg": 3.0,
+}
+
+
+def station_matches_lahore_pakistan(data: dict) -> bool:
+    city = data.get("data", {}).get("city", {})
+    geo = city.get("geo")
+    location = str(city.get("location", "")).lower()
+
+    if not geo or len(geo) != 2:
+        return False
+
+    lat = float(geo[0])
+    lon = float(geo[1])
+
+    if any(token in location for token in ["usa", "united states", "oregon", "bend", "fairway heights"]):
+        return False
+
+    return (
+        abs(lat - PAKISTAN_LAHORE["lat"]) <= PAKISTAN_LAHORE["radius_deg"]
+        and abs(lon - PAKISTAN_LAHORE["lon"]) <= PAKISTAN_LAHORE["radius_deg"]
+    )
 
 
 def fetch_current_aqi(city: str) -> int:
     """Fetch current AQI once (used as base for synthetic history)."""
-    station = CITY_MAP.get(city.lower(), city)
+    station = CITY_MAP.get(city.lower()) or city
+
     url = f"https://api.waqi.info/feed/{station}/?token={TOKEN}"
     try:
         resp = requests.get(url, timeout=10)
         data = resp.json()
         if data.get("status") == "ok":
+            if city.lower() == "lahore" and not station_matches_lahore_pakistan(data):
+                print(f"[WARN] Lahore station {station} does not match Lahore, Pakistan coordinates; keeping cron-safe fallback behavior.")
             aqi = data["data"].get("aqi", 80)
             return 80 if aqi == "-" else int(aqi)
     except Exception as e:
