@@ -29,8 +29,7 @@ def run_pipeline(city: str):
     # Bronze
     bronze_row = fetch_aqi(city)
     if not bronze_row:
-        print(f"[ERROR] Fetch failed for {city}")
-        return
+        raise RuntimeError(f"Fetch failed for {city}")
 
     try:
         supabase.table("aqi_bronze_raw").upsert({
@@ -53,8 +52,7 @@ def run_pipeline(city: str):
         except Exception as e:
             print(f"[WARN] Staleness check failed: {e}")
     except Exception as e:
-        print(f"[ERROR] Bronze save failed: {e}")
-        return
+        raise RuntimeError(f"Bronze save failed: {e}") from e
 
     # Silver
     silver_row = clean_to_silver(bronze_row)
@@ -67,8 +65,7 @@ def run_pipeline(city: str):
         ).execute()
         print(f"[OK] Silver saved")
     except Exception as e:
-        print(f"[ERROR] Silver save failed: {e}")
-        return
+        raise RuntimeError(f"Silver save failed: {e}") from e
 
     # Get recent silver rows (most recent 30, oldest first for feature calc)
     try:
@@ -80,8 +77,7 @@ def run_pipeline(city: str):
             .execute()
         silver_rows = list(reversed(recent.data))
     except Exception as e:
-        print(f"[ERROR] Fetching silver rows failed: {e}")
-        return
+        raise RuntimeError(f"Fetching silver rows failed: {e}") from e
 
     # Gold
     gold_row = build_gold_features(silver_rows)

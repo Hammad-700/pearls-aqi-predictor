@@ -73,7 +73,9 @@ def fetch_aqi(city: str) -> dict:
             return None
 
         if city.lower() == "lahore" and not station_matches_lahore_pakistan(data):
-            print(f"[WARN] Lahore station {station} does not match Lahore, Pakistan coordinates; continuing with existing pipeline behavior for cron compatibility.")
+            raise ValueError(
+                f"Lahore station {station} does not match Lahore, Pakistan coordinates"
+            )
 
         if city.lower() == "lahore":
             try:

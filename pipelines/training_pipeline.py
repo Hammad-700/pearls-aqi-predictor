@@ -37,6 +37,8 @@ FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
                 "aqi_change_rate", "temperature", "humidity"]
 TARGET_COLS = ["aqi_d1", "aqi_d2", "aqi_d3"]
+WEATHER_COLS = ["temperature", "humidity"]
+MIN_WEATHER_COVERAGE = 0.80
 
 
 def load_gold_data():
@@ -174,6 +176,14 @@ def run_training():
     if len(df) < 100:
         print("[ERROR] Not enough data - run backfill first")
         return
+
+    weather_coverage = df[WEATHER_COLS].notna().all(axis=1).mean()
+    print(f"[INFO] Complete weather coverage: {weather_coverage:.1%}")
+    if weather_coverage < MIN_WEATHER_COVERAGE:
+        raise RuntimeError(
+            f"Only {weather_coverage:.1%} of labeled rows have temperature and humidity; "
+            f"need at least {MIN_WEATHER_COVERAGE:.0%} before training"
+        )
 
     X_train, X_test, y_train, y_test, le = prepare_data(df)
     print(f"[INFO] Train: {len(X_train)} rows, Test: {len(X_test)} rows")
