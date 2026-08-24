@@ -239,15 +239,20 @@ with weather_col:
     temperature_text = f"{float(current_temperature):.1f}°C" if current_temperature is not None else "Unavailable"
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
-        padding:20px 28px;height:166px;box-sizing:border-box;color:#173b2a;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px">
-            Live temperature
+        padding:20px 28px;display:flex;align-items:center;gap:24px;height:166px;
+        box-sizing:border-box;color:#173b2a;margin-bottom:16px">
+        <div style="background-color:rgba(0,0,0,0.08);border-radius:10px;
+            padding:14px 20px;text-align:center;min-width:110px">
+            <div style="font-size:44px;font-weight:800;color:#173b2a;line-height:1;white-space:nowrap">
+                {temperature_text}
+            </div>
+            <div style="font-size:11px;color:#173b2a;margin-top:4px;font-weight:600;letter-spacing:0.5px">Temperature</div>
         </div>
-        <div style="font-size:44px;font-weight:800;line-height:1.1;margin-top:12px;white-space:nowrap">
-            {temperature_text}
-        </div>
-        <div style="font-size:14px;margin-top:4px;opacity:0.75">
-            Lahore
+        <div>
+            <div style="font-size:26px;font-weight:700;color:#173b2a">Live temperature</div>
+            <div style="font-size:15px;color:#173b2a;margin-top:6px;opacity:0.8">
+                Lahore - Current Temperature
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
