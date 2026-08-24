@@ -163,9 +163,12 @@ def predict(city, model, le, feature_cols):
 
 def get_history(city):
     sb = get_supabase()
+    from datetime import datetime, timezone, timedelta
+    ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
-        .order("timestamp", desc=True).limit(200).execute()
+        .gte("timestamp", ten_days_ago)\
+        .order("timestamp", desc=True).limit(500).execute()
     return result.data
 
 @st.cache_data(ttl=300)
