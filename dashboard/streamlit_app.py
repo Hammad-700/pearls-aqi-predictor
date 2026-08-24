@@ -97,10 +97,16 @@ def load_model():
                 f.write(encoder_bytes)
             model = joblib.load(model_path)
             le = joblib.load(encoder_path)
-        return model, le, version, model_type
+        feature_cols = meta.get("feature_columns")
+        if not feature_cols:
+            feature_cols = getattr(model, "feature_names_in_", None)
+        if not feature_cols and getattr(model, "estimators_", None):
+            feature_cols = getattr(model.estimators_[0], "feature_names_in_", None)
+        feature_cols = list(feature_cols) if feature_cols is not None else LEGACY_FEATURE_COLS
+        return model, le, version, model_type, feature_cols
     except Exception as e:
         st.error(f"Model load error: {e}")
-        return None, None, None, None
+        return None, None, None, None, None
 
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
@@ -113,8 +119,9 @@ def get_alert(aqi):
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
                 "aqi_change_rate", "temperature", "humidity", "pm25"]
+LEGACY_FEATURE_COLS = FEATURE_COLS[:-1]
 
-def predict(city, model, le):
+def predict(city, model, le, feature_cols):
     sb = get_supabase()
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
@@ -136,7 +143,7 @@ def predict(city, model, le):
         "humidity": float(row.get("humidity")) if row.get("humidity") is not None else 0.0,
         "pm25": row.get("pm25") or 0,
     }
-    X = pd.DataFrame([features])[FEATURE_COLS].apply(pd.to_numeric, errors="coerce").fillna(0)
+    X = pd.DataFrame([features])[feature_cols].apply(pd.to_numeric, errors="coerce").fillna(0)
     preds = model.predict(X)[0]
     as_of = row["timestamp"]
     base_date = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
@@ -157,7 +164,7 @@ def get_history(city):
     return result.data
 
 @st.cache_data(ttl=300)
-def get_shap_background(city, _le):
+def get_shap_background(city, _le, feature_cols):
     sb = get_supabase()
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
@@ -167,12 +174,12 @@ def get_shap_background(city, _le):
     if df.empty:
         return None
     df["city_encoded"] = _le.transform(df["city"])
-    for col in FEATURE_COLS:
+    for col in feature_cols:
         if col == "city_encoded":
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
-    df = df.dropna(subset=FEATURE_COLS)
-    return df[FEATURE_COLS] if not df.empty else None
+    df = df.dropna(subset=feature_cols)
+    return df[feature_cols] if not df.empty else None
 
 def compute_shap_importance(model, model_type, X_background):
     import shap
@@ -201,7 +208,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load model
-model, le, version, model_type = load_model()
+model, le, version, model_type, model_feature_cols = load_model()
 if model is None:
     st.error("Model not loaded!")
     st.stop()
@@ -223,7 +230,7 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of, current_aqi, current_temperature = predict(city, model, le)
+    forecast, as_of, current_aqi, current_temperature = predict(city, model, le, model_feature_cols)
     history = get_history(city)
 
 # Staleness check + Pakistan Time
@@ -381,7 +388,7 @@ st.markdown("<h2>What drives AQI predictions?</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
-    X_background = get_shap_background(city, le)
+    X_background = get_shap_background(city, le, model_feature_cols)
     if X_background is None or len(X_background) < 5:
         raise ValueError("Not enough historical rows for SHAP background")
     importances = compute_shap_importance(model, model_type, X_background)
@@ -409,7 +416,7 @@ feature_labels = {
     "humidity": "Humidity"
 }
 importance_data = {
-    "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],
+    "Feature": [feature_labels.get(f, f) for f in model_feature_cols],
     "Importance": importances
 }
 
