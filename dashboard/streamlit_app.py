@@ -48,6 +48,8 @@ h1 + div p {
         min-height: 132px !important;
         padding: 16px !important;
         gap: 14px !important;
+        grid-template-columns: 86px max-content !important;
+        justify-content: center;
     }
 
     .forecast-aqi-box {
@@ -110,8 +112,9 @@ h1 + div p {
     height: 166px;
     padding: 16px;
     display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: 96px max-content;
     align-items: center;
+    justify-content: center;
     gap: 16px;
     box-sizing: border-box;
     border-radius: 14px;
