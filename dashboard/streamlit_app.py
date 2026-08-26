@@ -242,7 +242,9 @@ def predict(city, model, le, feature_cols=None):
         return None, None, None
     row = result.data[0]
     if feature_cols is None:
-        feature_cols = getattr(model, "feature_names_in_", None) or FEATURE_COLS
+        feature_cols = getattr(model, "feature_names_in_", None)
+        if feature_cols is None:
+            feature_cols = FEATURE_COLS
     city_encoded = int(le.transform([city])[0])
     features = {
         "city_encoded": city_encoded,
