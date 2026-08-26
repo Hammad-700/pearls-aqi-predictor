@@ -43,6 +43,36 @@ h1 + div p {
 }
 
 @media (max-width: 768px) {
+    .forecast-card {
+        min-height: 132px !important;
+        padding: 16px !important;
+        gap: 14px !important;
+    }
+
+    .forecast-aqi-box {
+        flex: 0 0 86px !important;
+        min-width: 0 !important;
+        padding: 12px 10px !important;
+    }
+
+    .forecast-aqi-value {
+        font-size: 34px !important;
+    }
+
+    .forecast-details {
+        min-width: 0;
+    }
+
+    .forecast-label {
+        font-size: 20px !important;
+        overflow-wrap: anywhere;
+    }
+
+    .forecast-date {
+        font-size: 13px !important;
+        overflow-wrap: anywhere;
+    }
+
     .temperature-card {
         flex-direction: row;
         align-items: center !important;
@@ -72,6 +102,59 @@ h1 + div p {
     .temperature-details-location {
         overflow-wrap: anywhere;
     }
+}
+
+.forecast-card {
+    width: 100%;
+    min-height: 166px;
+    height: 100%;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    box-sizing: border-box;
+    border-radius: 14px;
+    margin: 4px 0;
+}
+
+.forecast-aqi-box {
+    flex: 0 0 110px;
+    min-width: 0;
+    padding: 14px 20px;
+    text-align: center;
+    box-sizing: border-box;
+    border-radius: 10px;
+}
+
+.forecast-aqi-value {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.forecast-aqi-caption {
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.forecast-details {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.forecast-label {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.forecast-date {
+    font-size: 15px;
+    margin-top: 6px;
+    opacity: 0.8;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -332,18 +415,14 @@ col1, col2, col3 = st.columns(3)
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
-    <div style="background-color:{color};border-radius:14px;padding:20px 28px;
-        display:flex;align-items:center;gap:24px;height:166px;box-sizing:border-box;margin:4px">
-        <div style="background-color:rgba(0,0,0,0.15);border-radius:10px;
-            padding:14px 20px;text-align:center;min-width:110px">
-            <div style="font-size:44px;font-weight:800;color:black;line-height:1;white-space:nowrap">{f['aqi']}</div>
-            <div style="font-size:11px;color:black;margin-top:4px;font-weight:600;letter-spacing:0.5px">AQI</div>
+    <div class="forecast-card" style="background-color:{color};color:black">
+        <div class="forecast-aqi-box" style="background-color:rgba(0,0,0,0.15)">
+            <div class="forecast-aqi-value">{f['aqi']}</div>
+            <div class="forecast-aqi-caption">AQI</div>
         </div>
-        <div style="color:black">
-            <div style="font-size:26px;font-weight:700">{label}</div>
-            <div style="font-size:15px;margin-top:6px;opacity:0.8">
-             {f['date']}
-            </div>
+        <div class="forecast-details">
+            <div class="forecast-label">{label}</div>
+            <div class="forecast-date">{f['date']}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
