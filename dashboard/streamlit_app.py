@@ -429,17 +429,17 @@ forecast_cards = []
 for f in forecast:
     label, color = get_alert(f["aqi"])
     forecast_cards.append(f"""
-    <div class="forecast-card" style="background-color:{color};color:black">
-        <div class="forecast-aqi-box" style="background-color:rgba(0,0,0,0.15)">
-            <div class="forecast-aqi-value">{f['aqi']}</div>
-            <div class="forecast-aqi-caption">AQI</div>
-        </div>
-        <div class="forecast-details">
-            <div class="forecast-label">{label}</div>
-            <div class="forecast-date">{f['date']}</div>
-        </div>
-    </div>
-    """)
+<div class="forecast-card" style="background-color:{color};color:black">
+<div class="forecast-aqi-box" style="background-color:rgba(0,0,0,0.15)">
+<div class="forecast-aqi-value">{f['aqi']}</div>
+<div class="forecast-aqi-caption">AQI</div>
+</div>
+<div class="forecast-details">
+<div class="forecast-label">{label}</div>
+<div class="forecast-date">{f['date']}</div>
+</div>
+</div>
+""")
 st.markdown(
     f'<div class="forecast-grid">{"".join(forecast_cards)}</div>',
     unsafe_allow_html=True,
