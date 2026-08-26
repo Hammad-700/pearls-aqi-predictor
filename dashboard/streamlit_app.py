@@ -44,6 +44,7 @@ h1 + div p {
 
 @media (max-width: 768px) {
     .forecast-card {
+        height: 132px !important;
         min-height: 132px !important;
         padding: 16px !important;
         gap: 14px !important;
@@ -106,19 +107,18 @@ h1 + div p {
 
 .forecast-card {
     width: 100%;
-    min-height: 166px;
-    height: 100%;
+    height: 166px;
     padding: 16px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
     align-items: center;
     gap: 16px;
     box-sizing: border-box;
     border-radius: 14px;
-    margin: 4px 0;
+    margin: 0;
 }
 
 .forecast-aqi-box {
-    flex: 0 0 96px;
     min-width: 0;
     padding: 12px 10px;
     text-align: center;
@@ -412,7 +412,7 @@ st.markdown("---")
 st.markdown(f"<h2>3-Day Forecast for {city.title()}</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3 = st.columns(3, gap="small", vertical_alignment="center")
 for col, f in zip([col1, col2, col3], forecast):
     label, color = get_alert(f["aqi"])
     col.markdown(f"""
