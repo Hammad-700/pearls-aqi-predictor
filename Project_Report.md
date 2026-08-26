@@ -18,29 +18,6 @@ forecasts through a Streamlit dashboard.
 
 ------------------------------------------------------------------------
 
-## Features
-
--   Real-time AQI collection from AQICN
--   Temperature and humidity from Open-Meteo
--   Lahore station validation
--   Bronze--Silver--Gold medallion data architecture
--   Time-series feature engineering
--   24-hour, 48-hour, and 72-hour AQI targets
--   Multiple regression models
--   Time-aware train/test evaluation
--   Five-fold `TimeSeriesSplit` cross-validation
--   Automatic champion-model selection
--   Model versioning and registry
--   Supabase database and model storage
--   SHAP/model feature importance
--   Streamlit forecasting dashboard
--   Flask REST API
--   Data-staleness checks
--   Duplicate-safe upserts
--   Automated GitHub Actions pipelines
--   Unit tests for important feature-pipeline logic
-
-------------------------------------------------------------------------
 
 ## System Architecture
 
@@ -115,8 +92,6 @@ The model currently uses 19 input features:
   `no2_raw`             Raw nitrogen dioxide concentration
   `o3_raw`              Raw ozone concentration
 
-The strongest reported predictors are `aqi_lag_1h` and
-`aqi_roll_mean_24h`.
 
 ------------------------------------------------------------------------
 
