@@ -118,6 +118,13 @@ h1 + div p {
     margin: 0;
 }
 
+.forecast-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
 .forecast-aqi-box {
     min-width: 0;
     padding: 12px 10px;
@@ -156,6 +163,12 @@ h1 + div p {
     margin-top: 6px;
     opacity: 0.8;
     white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .forecast-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -412,10 +425,10 @@ st.markdown("---")
 st.markdown(f"<h2>3-Day Forecast for {city.title()}</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3, gap="small", vertical_alignment="center")
-for col, f in zip([col1, col2, col3], forecast):
+forecast_cards = []
+for f in forecast:
     label, color = get_alert(f["aqi"])
-    col.markdown(f"""
+    forecast_cards.append(f"""
     <div class="forecast-card" style="background-color:{color};color:black">
         <div class="forecast-aqi-box" style="background-color:rgba(0,0,0,0.15)">
             <div class="forecast-aqi-value">{f['aqi']}</div>
@@ -426,7 +439,11 @@ for col, f in zip([col1, col2, col3], forecast):
             <div class="forecast-date">{f['date']}</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
+st.markdown(
+    f'<div class="forecast-grid">{"".join(forecast_cards)}</div>',
+    unsafe_allow_html=True,
+)
 
 spacer()
 
