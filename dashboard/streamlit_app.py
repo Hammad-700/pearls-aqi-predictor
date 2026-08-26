@@ -108,19 +108,19 @@ h1 + div p {
     width: 100%;
     min-height: 166px;
     height: 100%;
-    padding: 20px 28px;
+    padding: 16px;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
     box-sizing: border-box;
     border-radius: 14px;
     margin: 4px 0;
 }
 
 .forecast-aqi-box {
-    flex: 0 0 110px;
+    flex: 0 0 96px;
     min-width: 0;
-    padding: 14px 20px;
+    padding: 12px 10px;
     text-align: center;
     box-sizing: border-box;
     border-radius: 10px;
@@ -146,7 +146,7 @@ h1 + div p {
 }
 
 .forecast-label {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 700;
     line-height: 1.15;
 }
@@ -155,6 +155,7 @@ h1 + div p {
     font-size: 15px;
     margin-top: 6px;
     opacity: 0.8;
+    white-space: nowrap;
 }
 </style>
 """, unsafe_allow_html=True)
