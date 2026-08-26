@@ -400,7 +400,7 @@ with aqi_col:
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div style="font-size:12px;color:gray;margin-top:8px">
+    <div style="font-size:15px;color:gray;margin-top:8px">
         Main pollutant: PM2.5 ({row.get('pm25_raw', '—')} µg/m³)
     </div>
     """, unsafe_allow_html=True)
