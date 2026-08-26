@@ -233,14 +233,16 @@ FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "pm25_raw", "pm10_raw", "no2_raw", "o3_raw"]
 LEGACY_FEATURE_COLS = FEATURE_COLS[:10]
 
-def predict(city, model, le, feature_cols):
+def predict(city, model, le, feature_cols=None):
     sb = get_supabase()
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
         .order("timestamp", desc=True).limit(1).execute()
     if not result.data:
-        return None, None, None, None
+        return None, None, None
     row = result.data[0]
+    if feature_cols is None:
+        feature_cols = getattr(model, "feature_names_in_", None) or FEATURE_COLS
     city_encoded = int(le.transform([city])[0])
     features = {
         "city_encoded": city_encoded,
@@ -275,7 +277,7 @@ def predict(city, model, le, feature_cols):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    return forecast, row["timestamp"], row.get("aqi", 0), row.get("temperature"), row
+    return forecast, row["timestamp"], row
 
 def get_history(city):
     sb = get_supabase()
@@ -354,8 +356,11 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of, current_aqi, current_temperature, row = predict(city, model, le, model_feature_cols)
+    forecast, as_of, latest_row = predict(city, model, le)
     history = get_history(city)
+
+current_aqi = latest_row.get("aqi", 0)
+current_temperature = latest_row.get("temperature")
 
 # Staleness check + Pakistan Time
 from datetime import datetime, timezone, timedelta
@@ -401,7 +406,7 @@ with aqi_col:
 
     st.markdown(f"""
     <div style="font-size:15px;color:gray;margin:8px 0 16px 7px">
-        Main pollutant: PM2.5 ({row.get('pm25_raw', '—')} µg/m³)
+        Main pollutant: PM2.5 ({latest_row.get('pm25_raw', '—')} µg/m³)
     </div>
     """, unsafe_allow_html=True)
 
