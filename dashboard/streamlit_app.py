@@ -121,6 +121,11 @@ h1 + div p {
     margin: 0;
 }
 
+.forecast-card > * {
+    position: relative;
+    left: -3px;
+}
+
 .forecast-grid {
     width: 100%;
     display: grid;
