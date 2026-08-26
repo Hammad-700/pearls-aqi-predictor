@@ -413,20 +413,20 @@ with weather_col:
     else:
         temperature_text = "Unavailable"
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
+    <div class="temperature-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-radius:14px;
         padding:20px 28px;display:flex;align-items:center;gap:24px;height:166px;
         box-sizing:border-box;color:#173b2a;margin-bottom:16px">
-        <div style="background-color:rgba(0,0,0,0.08);border-radius:10px;
+        <div class="temperature-value-box" style="background-color:rgba(0,0,0,0.08);border-radius:10px;
             padding:14px 8px;text-align:center;width:110px;min-width:110px;box-sizing:border-box;
             display:flex;flex-direction:column;align-items:center;justify-content:center">
-            <div style="font-size:40px;font-weight:800;color:#173b2a;line-height:1;white-space:nowrap">
+            <div class="temperature-value" style="font-size:40px;font-weight:800;color:#173b2a;line-height:1;white-space:nowrap">
                 {temperature_text}
             </div>
             <div style="font-size:11px;color:#173b2a;margin-top:4px;font-weight:600;letter-spacing:0.5px">Temperature</div>
         </div>
-        <div>
-            <div style="font-size:26px;font-weight:700;color:#173b2a">Weather</div>
-            <div style="font-size:15px;color:#173b2a;margin-top:6px;opacity:0.8">
+        <div class="temperature-details">
+            <div class="temperature-details-title" style="font-size:26px;font-weight:700;color:#173b2a">Weather</div>
+            <div class="temperature-details-location" style="font-size:15px;color:#173b2a;margin-top:6px;opacity:0.8">
                 Lahore - Current Weather
             </div>
         </div>
