@@ -275,7 +275,7 @@ def predict(city, model, le, feature_cols):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    return forecast, row["timestamp"], row.get("aqi", 0), row.get("temperature")
+    return forecast, row["timestamp"], row.get("aqi", 0), row.get("temperature"), row
 
 def get_history(city):
     sb = get_supabase()
@@ -354,7 +354,7 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of, current_aqi, current_temperature = predict(city, model, le, model_feature_cols)
+    forecast, as_of, current_aqi, current_temperature, row = predict(city, model, le, model_feature_cols)
     history = get_history(city)
 
 # Staleness check + Pakistan Time
@@ -396,6 +396,12 @@ with aqi_col:
                 Lahore - Current AQI
             </div>
         </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="font-size:12px;color:gray;margin-top:8px">
+        Main pollutant: PM2.5 ({row.get('pm25_raw', '—')} µg/m³)
     </div>
     """, unsafe_allow_html=True)
 
