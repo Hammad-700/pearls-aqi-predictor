@@ -8,7 +8,12 @@ import numpy as np
 import os
 from datetime import datetime, timedelta, timezone
 
-st.set_page_config(page_title="Pearls AQI Predictor 🇵🇰", page_icon="🌍", layout="wide")
+st.set_page_config(
+    page_title="Pearls AQI Predictor 🇵🇰",
+    page_icon="🌍",
+    layout="wide",
+    initial_sidebar_state="auto",
+)
 st.markdown("""
 <style>
 /* Main page spacing */
