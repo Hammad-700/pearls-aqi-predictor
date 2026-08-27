@@ -1,5 +1,6 @@
 import os
 import sys
+import math  # <-- ADDED for NaN detection
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 
@@ -211,18 +212,32 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     else:
         gold = dict(gold)
 
-    # Critical fix: fill weather/station fields if feature engineering omitted them.
+    # 1. Force station fields from silver (they are always correct)
+    gold["station_id"] = silver.get("station_id")
+    gold["station_name"] = silver.get("station_name")
+
+    # 2. Fill missing numeric fields from silver (also check for NaN)
     for key in [
-        "station_id", "station_name", "temperature", "humidity", "pm25",
+        "temperature", "humidity", "pm25",
         "wind_speed", "wind_direction", "precipitation", "pressure",
         "pm25_raw", "pm10_raw", "no2_raw", "o3_raw",
     ]:
-        if gold.get(key) is None:
+        val = gold.get(key)
+        # If missing or NaN -> copy from silver
+        if val is None or (isinstance(val, float) and math.isnan(val)):
             gold[key] = silver.get(key)
 
     gold["city"] = silver["city"]
     gold["timestamp"] = silver["timestamp"]
+
+    # Build payload, filtering only known columns
     payload = {k: v for k, v in gold.items() if k in GOLD_COLS}
+
+    # 3. CRITICAL: convert any remaining NaN to None (null in JSON)
+    payload = {
+        k: (None if isinstance(v, float) and math.isnan(v) else v)
+        for k, v in payload.items()
+    }
 
     print(
         f"[DEBUG] Gold | station={payload.get('station_id')} | "
