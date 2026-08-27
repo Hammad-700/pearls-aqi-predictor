@@ -1,6 +1,6 @@
 import os
 import sys
-import math  # <-- ADDED for NaN detection
+import math  # Added for NaN detection
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 
@@ -32,6 +32,23 @@ GOLD_COLS = [
 ]
 
 
+# ---------- Helper: recursively clean NaN values ----------
+def clean_nan_values(obj):
+    """
+    Recursively convert float('nan') to None in dicts and lists.
+    This guarantees JSON-serialisable data.
+    """
+    if isinstance(obj, dict):
+        return {k: clean_nan_values(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nan_values(v) for v in obj]
+    elif isinstance(obj, float) and math.isnan(obj):
+        return None
+    else:
+        return obj
+
+
+# ---------- Utility functions ----------
 def first_value(*values: Any) -> Any:
     for value in values:
         if value is not None and value != "":
@@ -115,6 +132,7 @@ def extract_station(bronze: Dict[str, Any], silver: Dict[str, Any]) -> Dict[str,
     }
 
 
+# ---------- Bronze ----------
 def save_bronze(bronze: Dict[str, Any]) -> None:
     base = {
         "city": bronze["city"],
@@ -137,13 +155,14 @@ def save_bronze(bronze: Dict[str, Any]) -> None:
         ).execute()
 
 
+# ---------- Silver ----------
 def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
     silver = clean_to_silver(bronze)
     if not silver:
         raise RuntimeError("clean_to_silver() returned no row")
     silver = dict(silver)
 
-    # Critical fix: preserve weather even if clean_to_silver() drops it.
+    # Preserve weather from bronze (clean_to_silver may drop it)
     weather = extract_weather(bronze)
     for key, value in weather.items():
         if silver.get(key) is None and value is not None:
@@ -202,6 +221,7 @@ def partial_gold(silver: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# ---------- Gold (FIXED) ----------
 def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     gold = build_gold_features(history)
     if not gold:
@@ -212,13 +232,13 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     else:
         gold = dict(gold)
 
-    # 1. Force station fields from silver (convert any NaN to None)
+    # 1. Explicitly set station fields, converting NaN to None
     station_id = silver.get("station_id")
     station_name = silver.get("station_name")
     gold["station_id"] = None if (isinstance(station_id, float) and math.isnan(station_id)) else station_id
     gold["station_name"] = None if (isinstance(station_name, float) and math.isnan(station_name)) else station_name
 
-    # 2. Fill missing numeric fields from silver (also check for NaN)
+    # 2. Fill missing numeric fields from silver (handle NaN)
     for key in [
         "temperature", "humidity", "pm25",
         "wind_speed", "wind_direction", "precipitation", "pressure",
@@ -227,30 +247,21 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
         val = gold.get(key)
         if val is None or (isinstance(val, float) and math.isnan(val)):
             silver_val = silver.get(key)
-            # If silver_val is NaN, convert to None
             gold[key] = None if (isinstance(silver_val, float) and math.isnan(silver_val)) else silver_val
 
     gold["city"] = silver["city"]
     gold["timestamp"] = silver["timestamp"]
 
-    # 3. Build payload
+    # 3. Build payload, filter columns
     payload = {k: v for k, v in gold.items() if k in GOLD_COLS}
 
-    # 4. CRITICAL: clean every value – convert NaN to None
-    def clean_value(val):
-        if isinstance(val, float) and math.isnan(val):
-            return None
-        return val
+    # 4. CRITICAL: Recursively clean all NaN → None
+    payload = clean_nan_values(payload)
 
-    payload = {k: clean_value(v) for k, v in payload.items()}
+    # 5. Debug: show cleaned station (should be None or a number/string)
+    print(f"[DEBUG] Cleaned Gold payload (station={payload.get('station_id')})")
 
-    print(
-        f"[DEBUG] Gold | station={payload.get('station_id')} | "
-        f"AQI={payload.get('aqi')} | temp={payload.get('temperature')} | "
-        f"humidity={payload.get('humidity')} | PM2.5={payload.get('pm25_raw')}"
-    )
-
-    # 5. Upsert
+    # 6. Upsert
     result = (
         supabase.table("aqi_gold_features")
         .upsert(payload, on_conflict="city,timestamp")
@@ -260,6 +271,7 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     return payload
 
 
+# ---------- Pipeline runner ----------
 def run_pipeline(city: str) -> None:
     city = city.strip().lower()
     print(f"\n{'=' * 60}\nRunning feature pipeline: {city}\n{'=' * 60}")
