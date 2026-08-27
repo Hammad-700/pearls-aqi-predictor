@@ -10,6 +10,7 @@ and publishes forecasts through a Streamlit dashboard and Flask API.
 > **Important:** The initial historical backfill contains synthetic AQI values
 > used to bootstrap the pipeline. Current metrics are preliminary and must not
 > be treated as final production accuracy.
+
 ![AQI system architecture](images/AQI-Architecture.png)
 
 ## System Architecture
@@ -314,6 +315,7 @@ quality.
 is implemented from collection through forecasting and presentation. Replacing
 synthetic backfill with verified historical AQI observations is the most
 important next step for stronger scientific evaluation.
+
 **Author:** Muhammad Hammad Khalid  
 **Project:** Pearls AQI Predictor  
 **Location:** Lahore, Punjab, Pakistan
