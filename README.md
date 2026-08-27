@@ -29,7 +29,7 @@ Latest verified reading: **AQI 97**, **35.0°C**, **53% humidity** at **2026-08-
 ## Tech I used
 
 - **Python 3.14.7** - developed locally, deployed on 3.11 (hosting platforms haven't caught up yet)
-- **Scikit-learn, XGBoost, LightGBM** - five models trained and compared every day (including naive baseline)
+- **Scikit-learn, XGBoost, LightGBM** - five primary models trained and compared every day, with HistGradientBoosting as a LightGBM fallback
 - **Explainability** - SHAP feature importance for model predictions
 - **Supabase** - Postgres for data storage, Storage bucket as model registry
 - **Flask** - REST API with `/predict`, `/history`, `/health` endpoints (local)
@@ -169,7 +169,7 @@ pearls-aqi-predictor/
 │   ├── feature_pipeline.py
 │   ├── training_pipeline.py
 │   ├── backfill.py
-│   ├── alert_pipeline.py
+│   ├── backfill_weather.py
 │   └── cleanup.py
 ├── features/
 │   ├── fetch_aqi.py
