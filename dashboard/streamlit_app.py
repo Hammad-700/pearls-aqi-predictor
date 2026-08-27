@@ -475,17 +475,19 @@ st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 fig = go.Figure()
+
+# ---------- Historical line ----------
 if history:
     hist_df = pd.DataFrame(history)
     hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
-    hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")  # ← PKT
+    hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
+    hist_df = hist_df.sort_values("timestamp")
 
-    # Add gap detection — insert None where gap > 3 hours
+    # Gap detection
     hist_df["gap"] = hist_df["timestamp"].diff() > pd.Timedelta(hours=3)
-    x_vals = []
-    y_vals = []
+    x_vals, y_vals = [], []
     for i, row in hist_df.iterrows():
-        if row["gap"] and i > 0:
+        if row["gap"] and len(x_vals) > 0:
             x_vals.append(None)
             y_vals.append(None)
         x_vals.append(row["timestamp"])
@@ -497,90 +499,52 @@ if history:
         line=dict(color="#1f77b4", width=2),
         connectgaps=False
     ))
-forecast_dates = [f["date"] for f in forecast]
-forecast_aqi = [f["aqi"] for f in forecast]
+
+# ---------- Forecast line ----------
+as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
+
+# Use the very last historical point as the starting point of the forecast
+if history:
+    last_hist_ts = hist_df["timestamp"].iloc[-1]
+    last_hist_aqi = hist_df["aqi"].iloc[-1]
+else:
+    last_hist_ts = as_of_dt
+    last_hist_aqi = int(latest_row.get("aqi", 0))
+
+forecast_x = [last_hist_ts]
+forecast_y = [last_hist_aqi]
+
+for f in forecast:
+    # Place forecast at noon PKT of that day
+    f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
+    forecast_x.append(f_date)
+    forecast_y.append(f["aqi"])
+
 fig.add_trace(go.Scatter(
-    x=forecast_dates, y=forecast_aqi,
+    x=forecast_x,
+    y=forecast_y,
     name="Forecast AQI",
     line=dict(color="#ff4b4b", dash="dash", width=2),
-    mode="lines+markers", marker=dict(size=10)
+    mode="lines+markers",
+    marker=dict(size=9)
 ))
+
+# Reference lines
 fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
 fig.add_hline(y=150, line_dash="dot", line_color="orange", annotation_text="Sensitive")
 fig.add_hline(y=200, line_dash="dot", line_color="red", annotation_text="Unhealthy")
+
 fig.update_layout(
     title=f"AQI Forecast for {city.title()}",
-    xaxis_title="Date", yaxis_title="AQI",
+    xaxis_title="Date",
+    yaxis_title="AQI",
     hovermode="x unified",
     plot_bgcolor="rgba(0,0,0,0)",
     height=420,
     margin=dict(t=40, b=40)
 )
+
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-
-spacer()
-
-# Section 3 — SHAP
-st.markdown("---")
-st.markdown("<h2>What drives AQI predictions?</h2>", unsafe_allow_html=True)
-st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
-
-try:
-    X_background = get_shap_background(city, le, model_feature_cols)
-    if X_background is None or len(X_background) < 5:
-        raise ValueError("Not enough historical rows for SHAP background")
-    importances = compute_shap_importance(model, model_type, X_background)
-    chart_title = "Feature Importance"
-except Exception as e:
-    base_estimator = model.estimators_[0]
-    if hasattr(base_estimator, 'feature_importances_'):
-        importances = np.mean([est.feature_importances_ for est in model.estimators_], axis=0)
-    elif hasattr(base_estimator, 'coef_'):
-        importances = np.abs(base_estimator.coef_)
-    else:
-        importances = [5.9, 0.6, 0.5, 0.35, 0.15, 0.10, 0.07, 0.0]
-    chart_title = "Feature Importance (Model-based)"
-
-feature_labels = {
-    "city_encoded": "City",
-    "hour": "Hour of Day",
-    "day_of_week": "Day of Week",
-    "month": "Month",
-    "aqi_lag_1h": "AQI 1 Hour Ago",
-    "aqi_lag_24h": "AQI 24 Hours Ago",
-    "aqi_roll_mean_24h": "24h Rolling Average",
-    "aqi_change_rate": "AQI Change Rate",
-    "temperature": "Temperature",
-    "humidity": "Humidity",
-    "pm25": "PM2.5",
-    "wind_speed": "Wind Speed",
-    "wind_direction": "Wind Direction",
-    "precipitation": "Precipitation",
-    "pressure": "Pressure",
-    "pm25_raw": "PM2.5 Raw",
-    "pm10_raw": "PM10 Raw",
-    "no2_raw": "NO2 Raw",
-    "o3_raw": "O3 Raw",
-}
-importance_data = {
-    "Feature": [feature_labels.get(f, f) for f in model_feature_cols],
-    "Importance": importances
-}
-
-imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
-fig2 = go.Figure(go.Bar(
-    x=imp_df["Importance"], y=imp_df["Feature"],
-    orientation='h', marker_color="#1f77b4"
-))
-fig2.update_layout(
-    title=chart_title,
-    height=max(420, len(imp_df) * 32 + 90),
-    yaxis=dict(dtick=1, automargin=True),
-    plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(t=40, b=40, l=170, r=20)
-)
-st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-
 
 
 spacer()
