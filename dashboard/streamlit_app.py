@@ -588,7 +588,7 @@ st.markdown("---")
 st.markdown("<h2>Model Limitations</h2>", unsafe_allow_html=True)
 st.markdown("""
 - **Training data uses synthetic backfill for first 30 days** – accuracy improves as real hourly data accumulates.
-- **Only Lahore supported (station @A471607)** – single station means total data loss if station goes offline.
+- **Only Lahore supported ** – single station means total data loss if station goes offline.
 - **AQI station updates every 4–6 hours**, not every minute.
 - **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
 """)
