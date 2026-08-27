@@ -223,7 +223,16 @@ def partial_gold(silver: Dict[str, Any]) -> Dict[str, Any]:
 
 # ---------- Gold (FIXED) ----------
 def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
+    current_ts = silver.get("timestamp")
+
+    # Remove any existing entry with the same timestamp (avoid duplicates)
+    history = [r for r in history if r.get("timestamp") != current_ts]
+
+    # Always put the current silver row as the latest
+    history = history + [silver]
+
     gold = build_gold_features(history)
+
     if not gold:
         if silver.get("aqi") is None:
             raise RuntimeError("No AQI available; cannot save Gold")
@@ -232,13 +241,18 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     else:
         gold = dict(gold)
 
-    # 1. Explicitly set station fields, converting NaN to None
+    # Force current values (safety net)
+    gold["city"] = silver["city"]
+    gold["timestamp"] = silver["timestamp"]
+    gold["aqi"] = silver.get("aqi")
+
+    # Station fields
     station_id = silver.get("station_id")
     station_name = silver.get("station_name")
     gold["station_id"] = None if (isinstance(station_id, float) and math.isnan(station_id)) else station_id
     gold["station_name"] = None if (isinstance(station_name, float) and math.isnan(station_name)) else station_name
 
-    # 2. Fill missing numeric fields from silver (handle NaN)
+    # Fill missing weather / pollutant fields from silver
     for key in [
         "temperature", "humidity", "pm25",
         "wind_speed", "wind_direction", "precipitation", "pressure",
@@ -249,19 +263,11 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
             silver_val = silver.get(key)
             gold[key] = None if (isinstance(silver_val, float) and math.isnan(silver_val)) else silver_val
 
-    gold["city"] = silver["city"]
-    gold["timestamp"] = silver["timestamp"]
-
-    # 3. Build payload, filter columns
     payload = {k: v for k, v in gold.items() if k in GOLD_COLS}
-
-    # 4. CRITICAL: Recursively clean all NaN → None
     payload = clean_nan_values(payload)
 
-    # 5. Debug: show cleaned station (should be None or a number/string)
-    print(f"[DEBUG] Cleaned Gold payload (station={payload.get('station_id')})")
+    print(f"[DEBUG] Cleaned Gold payload (aqi={payload.get('aqi')}, lag1={payload.get('aqi_lag_1h')})")
 
-    # 6. Upsert
     result = (
         supabase.table("aqi_gold_features")
         .upsert(payload, on_conflict="city,timestamp")
@@ -269,7 +275,6 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     )
     print(f"[OK] Gold saved ({len(result.data) if result.data else 'unknown'} row(s))")
     return payload
-
 
 # ---------- Pipeline runner ----------
 def run_pipeline(city: str) -> None:
