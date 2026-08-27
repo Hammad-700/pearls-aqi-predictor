@@ -315,6 +315,7 @@ quality.
 | AQICN and Open-Meteo | AQI and weather data |
 | Flask and Streamlit | API and dashboard |
 | GitHub Actions, Git, GitHub | Automation and version control |
+
 **Status:** Working end-to-end prototype and portfolio project. The pipeline
 is implemented from collection through forecasting and presentation. Replacing
 synthetic backfill with verified historical AQI observations is the most
