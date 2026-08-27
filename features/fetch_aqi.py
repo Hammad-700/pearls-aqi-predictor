@@ -19,9 +19,6 @@ LAHORE_STATION_IDS = [
     "-576562",   # Kahna Nau
     "-576547",   # Multan Road
     "-576556",   # Punjab University
-    "-582631",   # Wagha Border
-    "-576550",   # Safari Park
-    "-74005",    # Lahore Cantonment
 ]
 
 def station_matches_lahore_pakistan(data: dict) -> bool:
