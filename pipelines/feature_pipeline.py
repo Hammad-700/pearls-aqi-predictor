@@ -212,9 +212,11 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     else:
         gold = dict(gold)
 
-    # 1. Force station fields from silver (they are always correct)
-    gold["station_id"] = silver.get("station_id")
-    gold["station_name"] = silver.get("station_name")
+    # 1. Force station fields from silver (convert any NaN to None)
+    station_id = silver.get("station_id")
+    station_name = silver.get("station_name")
+    gold["station_id"] = None if (isinstance(station_id, float) and math.isnan(station_id)) else station_id
+    gold["station_name"] = None if (isinstance(station_name, float) and math.isnan(station_name)) else station_name
 
     # 2. Fill missing numeric fields from silver (also check for NaN)
     for key in [
@@ -223,21 +225,24 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
         "pm25_raw", "pm10_raw", "no2_raw", "o3_raw",
     ]:
         val = gold.get(key)
-        # If missing or NaN -> copy from silver
         if val is None or (isinstance(val, float) and math.isnan(val)):
-            gold[key] = silver.get(key)
+            silver_val = silver.get(key)
+            # If silver_val is NaN, convert to None
+            gold[key] = None if (isinstance(silver_val, float) and math.isnan(silver_val)) else silver_val
 
     gold["city"] = silver["city"]
     gold["timestamp"] = silver["timestamp"]
 
-    # Build payload, filtering only known columns
+    # 3. Build payload
     payload = {k: v for k, v in gold.items() if k in GOLD_COLS}
 
-    # 3. CRITICAL: convert any remaining NaN to None (null in JSON)
-    payload = {
-        k: (None if isinstance(v, float) and math.isnan(v) else v)
-        for k, v in payload.items()
-    }
+    # 4. CRITICAL: clean every value – convert NaN to None
+    def clean_value(val):
+        if isinstance(val, float) and math.isnan(val):
+            return None
+        return val
+
+    payload = {k: clean_value(v) for k, v in payload.items()}
 
     print(
         f"[DEBUG] Gold | station={payload.get('station_id')} | "
@@ -245,6 +250,7 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
         f"humidity={payload.get('humidity')} | PM2.5={payload.get('pm25_raw')}"
     )
 
+    # 5. Upsert
     result = (
         supabase.table("aqi_gold_features")
         .upsert(payload, on_conflict="city,timestamp")
