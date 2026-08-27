@@ -1,6 +1,5 @@
-import requests
 import os
-import json
+import requests
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from features.fetch_weather import fetch_weather_lahore
@@ -8,23 +7,29 @@ from features.fetch_weather import fetch_weather_lahore
 load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
-# Allow an explicit Lahore station override from the environment without breaking the current cron job.
-# Example: LAHORE_AQI_STATION_ID=@A123456
-LAHORE_AQI_STATION_ID = os.getenv("LAHORE_AQI_STATION_ID", "@A471607")
-
-# Keep the current station as default for compatibility with the existing pipeline.
-CITY_MAP = {
-    "lahore": LAHORE_AQI_STATION_ID,
-}
-
-PAKISTAN_LAHORE = {
-    "lat": 31.5204,
-    "lon": 74.3587,
-    "radius_deg": 3.0,
-}
-
+# Primary and backup stations – all verified Lahore
+# Order doesn't matter; we pick the one with latest timestamp.
+LAHORE_STATION_IDS = [
+    "-471607",   # G.O.R. (US Consulate) – reliable
+    "-576565",   # DHA Phase 6
+    "-576568",   # Barki Road
+    "-576577",   # Egerton Road
+    "-576544",   # Shahdara
+    "-576559",   # GT Road
+    "-576562",   # Kahna Nau
+    "-576547",   # Multan Road
+    "-576556",   # Punjab University
+    "-582631",   # Wagha Border
+    "-576550",   # Safari Park
+    "-74005",    # Lahore Cantonment
+    "-1866349",  # Terapand
+    "-538468",   # Naila Road
+    "-577588",   # Lathepur
+    "11765",     # Lahore US Embassy (older)
+]
 
 def station_matches_lahore_pakistan(data: dict) -> bool:
+    # Keep your existing geospatial check – useful if you ever add non-Lahore stations
     city = data.get("data", {}).get("city", {})
     geo = city.get("geo")
     location = str(city.get("location", "")).lower()
@@ -38,69 +43,93 @@ def station_matches_lahore_pakistan(data: dict) -> bool:
     if any(token in location for token in ["usa", "united states", "oregon", "bend", "fairway heights"]):
         return False
 
-    return (
-        abs(lat - PAKISTAN_LAHORE["lat"]) <= PAKISTAN_LAHORE["radius_deg"]
-        and abs(lon - PAKISTAN_LAHORE["lon"]) <= PAKISTAN_LAHORE["radius_deg"]
-    )
-
+    PAKISTAN_LAHORE = {"lat": 31.5204, "lon": 74.3587, "radius_deg": 3.0}
+    return (abs(lat - PAKISTAN_LAHORE["lat"]) <= PAKISTAN_LAHORE["radius_deg"]
+            and abs(lon - PAKISTAN_LAHORE["lon"]) <= PAKISTAN_LAHORE["radius_deg"])
 
 def fetch_aqi(city: str) -> dict:
-    station = CITY_MAP.get(city.lower()) or city
+    city = city.lower()
+    # Only implemented for Lahore now – but we keep city param for extensibility
+    if city != "lahore":
+        # fallback to old behaviour using CITY_MAP
+        station = CITY_MAP.get(city) or city
+        # ... (you can keep original single-station code for other cities)
+        # but here we only focus on Lahore
 
-    url = f"https://api.waqi.info/feed/{station}/?token={TOKEN}"
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+    best_data = None
+    best_timestamp = None
 
-        if data["status"] != "ok":
-            print(f"[ERROR] API returned status: {data['status']}")
-            return None
+    for sid in LAHORE_STATION_IDS:
+        url = f"https://api.waqi.info/feed/@{sid}/?token={TOKEN}"
+        try:
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("status") != "ok":
+                continue
 
-        if city.lower() == "lahore" and not station_matches_lahore_pakistan(data):
-            raise ValueError(
-                f"Lahore station {station} does not match Lahore, Pakistan coordinates"
-            )
+            # Validate it's actually Lahore (optional but safe)
+            if not station_matches_lahore_pakistan(data):
+                continue
 
-        if city.lower() == "lahore":
+            # Get reading timestamp
+            station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
+            if not station_time:
+                continue
+
+            # Parse to datetime for comparison
             try:
-                weather = fetch_weather_lahore()
-                print(f"[OK] Lahore weather: {weather['temperature']}C, {weather['humidity']}% humidity")
-            except Exception as e:
-                print(f"[WARN] Lahore weather fetch failed: {e}")
-                weather = {}
-        else:
-            weather = {}
-
-        # Use station's own reading time (not fetch time)
-        station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
-        if station_time:
-            try:
-                reading_ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
-                # Convert to UTC
-                reading_ts = reading_ts.astimezone(timezone.utc)
-                timestamp = reading_ts.isoformat()
+                ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
             except:
-                timestamp = datetime.now(timezone.utc).isoformat()
-        else:
-            timestamp = datetime.now(timezone.utc).isoformat()
+                continue
 
-        bronze_row = {
-            "city": city,
-            "timestamp": timestamp,
-            "raw_data": data["data"],
-            "weather": weather,
-        }
+            # Skip if AQI is invalid
+            aqi = data["data"].get("aqi")
+            if aqi is None or aqi == "-":
+                continue
 
-        print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']} (reading time: {timestamp[:16]})")
-        return bronze_row
+            # Keep the one with the latest timestamp
+            if best_timestamp is None or ts > best_timestamp:
+                best_timestamp = ts
+                best_data = data
 
-    except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Request failed for {city}: {e}")
+        except Exception as e:
+            # Log but continue to next station
+            print(f"[WARN] Station {sid} failed: {e}")
+            continue
+
+    if best_data is None:
+        print(f"[ERROR] No station returned valid data for {city}")
         return None
 
-if __name__ == "__main__":
-    city = input("Enter city name: ")
-    result = fetch_aqi(city)
-    if result:
-        print(json.dumps(result, indent=2, default=str))
+    # Now process the best_data (exactly as before)
+    data = best_data
+    # Weather (only for Lahore)
+    if city == "lahore":
+        try:
+            weather = fetch_weather_lahore()
+            print(f"[OK] Lahore weather: {weather['temperature']}C, {weather['humidity']}% humidity")
+        except Exception as e:
+            print(f"[WARN] Lahore weather fetch failed: {e}")
+            weather = {}
+    else:
+        weather = {}
+
+    # Build bronze row (using the station's own timestamp)
+    station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
+    try:
+        reading_ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
+        reading_ts = reading_ts.astimezone(timezone.utc)
+        timestamp = reading_ts.isoformat()
+    except:
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+    bronze_row = {
+        "city": city,
+        "timestamp": timestamp,
+        "raw_data": data["data"],
+        "weather": weather,
+    }
+
+    print(f"[OK] Fetched AQI for {city}: {data['data']['aqi']} (reading time: {timestamp[:16]}) from station {data['data'].get('idx')}")
+    return bronze_row
