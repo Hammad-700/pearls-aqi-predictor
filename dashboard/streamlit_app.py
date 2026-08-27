@@ -581,6 +581,66 @@ fig2.update_layout(
 )
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
+# ==========================================================
+# NEW SECTIONS ADDED BELOW (above the existing footer)
+# ==========================================================
+
+spacer()
+st.markdown("---")
+st.markdown("<h2>Learn more about air pollution in Lahore</h2>", unsafe_allow_html=True)
+st.markdown("""
+**What is the current air quality in Lahore?**  
+The current air quality in Lahore is considered unhealthy for sensitive groups. Children, older adults, and people with heart or lung conditions may experience health effects, while the general public is less likely to be affected.
+
+**How polluted is Lahore’s air?**  
+Lahore suffers from high levels of air pollution, with the city regularly ranking at the top of IQAir AirVisual’s live pollution rankings of major global cities. However, pollution only rose to the top of the public’s consciousness in early 2017, when actionable air quality data was published for the first time in Pakistan. In the absence of publicly available government data, a network of citizen-operated sensors began to monitor fine particulate matter, also known as PM2.5, and report data in real-time. The data laid bare Lahore’s high levels of air pollution, shocking the public and becoming a media talking point.  
+
+The resulting publicity led to a public interest petition to review the government’s response to the smog crisis, which was heard at Lahore’s High Court in November 2017. The court ordered authorities to prepare an updated smog response action plan, and publish daily pollution updates until able to publish hourly updates, as the non-government monitors do.
+
+Following the court order, the Punjab Environment Protection Council approved a Smog Action Plan and adopted an Air Quality Index (AQI) classification system in 2017. However, the AQI has been criticized by air quality advocates as being too lax and underreporting the severity of the pollution. While the U.S. AQI deems a PM2.5 concentration of 60 micrograms per cubic meter in the air as “Unhealthy”, Punjab’s AQI reads as “Satisfactory”, with the advice: “May cause minor breathing discomfort to sensitive people.”
+
+Because of this discrepancy, in November 2019, three children asked a court to declare the Punjab AQI “illegal and unreasonable.”
+
+**Does the Pakistani government publish real-time air quality data?**  
+As of November 2019, Pakistani authorities still don’t publish any real-time PM2.5 air quality data. All data come from non-government sensors and the U.S. State Department. The U.S. Embassy in Islamabad, and the three U.S. Consulates in Karachi, Lahore and Peshawar began monitoring and publishing real-time PM2.5 data online in the first half of 2019.  
+
+**When is Lahore’s air pollution at its worst?**  
+Air quality in Lahore usually worsens during the winter season from October to February when farmers in the wider Punjab province set light to the remnants of crops, producing smoke that adds to smog. At the same time, weather changes mean pollutants remain trapped in the air for longer.
+
+In November 2019, during the heart of Pakistan’s “smog season”, Lahore regularly came second only to Delhi – and sometimes overtook the Indian city – as the world’s most polluted city on IQAir AirVisual’s live rankings of major global cities.
+
+**Is Lahore the most polluted city?**  
+In 2018, Lahore ranked 10 in IQAir AirVisual’s 2018 World Air Quality Report. Neighbouring city Faisalabad's air pollution ranked number 3, while air pollution in Islamabad – Pakistan’s capital city – came in significantly lower at number 239. Karachi air pollution was the lowest among the four cities at number 318.
+
+Overall, Pakistan air pollution caused the country to be ranked as the second most polluted in the world with an annual PM2.5 average of 74.3 µg/m³.
+
+**What causes air pollution in Lahore?**  
+Air pollution in Lahore is caused by a combination of vehicle and industrial emissions, smoke from brick kilns, the burning of crop residue and general waste, and dust from construction sites. Other factors of air pollution include large scale losses of trees to build new roads and buildings.
+
+Winter air pollution is worse due to temperature inversion, which results in a layer of warm air that is prevented from rising trapping air pollutants.
+
+**How can air pollution in Lahore be reduced?**  
+Real-time air quality data must first be made available to everyone with greater granularity. When people know how much pollution they are breathing, they can better take measures to protect themselves and be enabled to mobilise efforts around tackling air pollution.
+
+Reducing industrial and vehicular emissions is also critical to improving the air quality. Prime Minister Imran Khan has told his cabinet that tackling air pollution is a priority, and authorities have taken measures to reduce pollution from brick kilns. Under the Punjab Green Development Program (PGDP) project, there are plans to do more, including establishing 10 air quality monitoring stations in Lahore.
+
+Individuals can take steps in their daily life to reduce personal emissions by carpooling or taking public transport, actively switching to greener fuel alternatives, and more.
+""")
+
+spacer()
+st.markdown("---")
+st.markdown("<h2>Known Limitations</h2>", unsafe_allow_html=True)
+st.markdown("""
+- **Training data uses synthetic backfill for first 30 days** – accuracy improves as real hourly data accumulates.
+- **Only Lahore supported (station @A471607)** – single station means total data loss if station goes offline.
+- **AQI station updates every 4–6 hours**, not every minute.
+- **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
+""")
+
+# ==========================================================
+# END OF NEW SECTIONS
+# ==========================================================
+
 spacer()
 
 # Footer
