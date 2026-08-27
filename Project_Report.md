@@ -37,6 +37,7 @@ Bronze raw data -> Silver cleaned data -> Gold features and targets
 | Training | `training_runs` | Model metrics and run metadata |
 | Registry | `model_registry` | Champion model metadata and version |
 | Artifacts | Supabase Storage | Serialized models and encoders |
+
 Records use `(city, timestamp)` as a logical composite key, which prevents
 duplicates and keeps all three layers aligned.
 
@@ -72,6 +73,7 @@ The model currently uses 19 input features:
 | `pressure` | Mean sea-level pressure |
 | `pm25_raw`, `pm10_raw` | Raw particulate concentrations |
 | `no2_raw`, `o3_raw` | Raw nitrogen dioxide and ozone concentrations |
+
 Calendar features and display use Pakistan local time; timestamps are stored
 in UTC.
 
