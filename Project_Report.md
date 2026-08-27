@@ -104,6 +104,7 @@ average RMSE across the three horizons.
 | LightGBM | 11.48 | Compared model |
 | XGBoost | 11.67 | Compared model |
 | Ridge Regression | 12.65 | Compared model |
+
 Random Forest has approximately 44% lower RMSE than the naive baseline in the
 reported comparison.
 
@@ -112,6 +113,7 @@ reported comparison.
 | Day 1 | 11.93 | 0.64 |
 | Day 2 | 11.10 | 0.69 |
 | Day 3 | 10.97 | 0.72 |
+
 These scores are preliminary because the historical labels include synthetic
 backfill. They should be reassessed after verified real observations replace
 the bootstrap data.
@@ -136,6 +138,7 @@ GitHub Actions runs the main workflow:
 |---|---|---|
 | Hourly | Feature pipeline | Fetch and process new Lahore AQI and weather data |
 | Daily | Training pipeline | Compare models and evaluate champion promotion |
+
 Automation includes staleness checks, secret management, failure alerts, and
 champion protection. Data-quality checks cover AQI validity, negative sensor
 values, station coordinates, source freshness, duplicate records, weather
@@ -167,6 +170,7 @@ The local Flask service provides:
 | `GET /health` | API and model status |
 | `GET /predict?city=lahore` | Three forecasts, maximum AQI, and alert level |
 | `GET /history?city=lahore` | Latest 24 AQI records |
+
 Example prediction response:
 
 ```json
