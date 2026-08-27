@@ -400,7 +400,7 @@ with aqi_col:
         <div>
             <div style="font-size:26px;font-weight:700;color:black">{alert_label}</div>
             <div style="font-size:15px;color:black;margin-top:6px;opacity:0.8">
-                Lahore - G.O.R Station
+                Lahore - 9 Stations
             </div>
         </div>
     </div>

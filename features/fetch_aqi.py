@@ -7,22 +7,14 @@ from features.fetch_weather import fetch_weather_lahore
 load_dotenv()
 TOKEN = os.getenv("AQICN_TOKEN")
 
-# Primary station (most reliable in Lahore)
-PRIMARY_STATION = "-471607"   # G.O.R. / US Consulate
-
-# Backup stations (only used if primary fails)
+PRIMARY_STATION = "-471607"   # US Consulate
 BACKUP_STATIONS = [
-    "-576565",   # DHA Phase 6
-    "-576568",   # Barki Road
-    "-576577",   # Egerton Road
-    "-576544",   # Shahdara
-    "-576559",   # GT Road
-    "-576562",   # Kahna Nau
-    "-576547",   # Multan Road
-    "-576556",   # Punjab University
+    "-576565", "-576568", "-576577", "-576544",
+    "-576559", "-576562", "-576547", "-576556",
 ]
 
-MAX_AGE_HOURS = 6   # Reject readings older than this
+ALL_STATIONS = [PRIMARY_STATION] + BACKUP_STATIONS
+MAX_AGE_HOURS = 6
 
 
 def station_matches_lahore_pakistan(data: dict) -> bool:
@@ -33,19 +25,15 @@ def station_matches_lahore_pakistan(data: dict) -> bool:
     if not geo or len(geo) != 2:
         return False
 
-    lat = float(geo[0])
-    lon = float(geo[1])
+    lat, lon = float(geo[0]), float(geo[1])
 
-    if any(token in location for token in ["usa", "united states", "oregon", "bend", "fairway heights"]):
+    if any(t in location for t in ["usa", "united states", "oregon", "bend", "fairway heights"]):
         return False
 
-    PAKISTAN_LAHORE = {"lat": 31.5204, "lon": 74.3587, "radius_deg": 3.0}
-    return (abs(lat - PAKISTAN_LAHORE["lat"]) <= PAKISTAN_LAHORE["radius_deg"]
-            and abs(lon - PAKISTAN_LAHORE["lon"]) <= PAKISTAN_LAHORE["radius_deg"])
+    return (abs(lat - 31.5204) <= 3.0 and abs(lon - 74.3587) <= 3.0)
 
 
 def _fetch_one_station(sid: str):
-    """Try a single station. Returns (data, timestamp) or (None, None)."""
     url = f"https://api.waqi.info/feed/@{sid}/?token={TOKEN}"
     try:
         resp = requests.get(url, timeout=10)
@@ -53,32 +41,33 @@ def _fetch_one_station(sid: str):
         data = resp.json()
 
         if data.get("status") != "ok":
-            return None, None
+            return None
 
         if not station_matches_lahore_pakistan(data):
-            return None, None
+            return None
 
         aqi = data["data"].get("aqi")
         if aqi is None or aqi == "-":
-            return None, None
+            return None
 
         station_time = data["data"]["time"].get("iso") or data["data"]["time"].get("s")
         if not station_time:
-            return None, None
+            return None
 
-        ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
-
-        # Reject very old readings
-        age = datetime.now(timezone.utc) - ts.astimezone(timezone.utc)
+        ts = datetime.fromisoformat(station_time.replace("Z", "+00:00")).astimezone(timezone.utc)
+        age = datetime.now(timezone.utc) - ts
         if age > timedelta(hours=MAX_AGE_HOURS):
-            print(f"[WARN] Station {sid} reading is {age} old — skipped")
-            return None, None
+            return None
 
-        return data, ts
-
+        return {
+            "sid": sid,
+            "aqi": int(aqi),
+            "ts": ts,
+            "data": data,
+        }
     except Exception as e:
         print(f"[WARN] Station {sid} failed: {e}")
-        return None, None
+        return None
 
 
 def fetch_aqi(city: str) -> dict:
@@ -86,67 +75,48 @@ def fetch_aqi(city: str) -> dict:
     if city != "lahore":
         raise NotImplementedError("Only Lahore is supported right now")
 
-    best_data = None
-    best_ts = None
-    used_station = None
+    results = []
+    for sid in ALL_STATIONS:
+        res = _fetch_one_station(sid)
+        if res:
+            results.append(res)
 
-    # 1. Try primary station first
-    data, ts = _fetch_one_station(PRIMARY_STATION)
-    if data is not None:
-        best_data = data
-        best_ts = ts
-        used_station = PRIMARY_STATION
-        print(f"[OK] Using primary station {PRIMARY_STATION}")
-    else:
-        # 2. Fall back to other stations (pick the newest valid one)
-        print("[WARN] Primary station failed — trying backups...")
-        for sid in BACKUP_STATIONS:
-            data, ts = _fetch_one_station(sid)
-            if data is None:
-                continue
-            if best_ts is None or ts > best_ts:
-                best_data = data
-                best_ts = ts
-                used_station = sid
-
-    if best_data is None:
-        print(f"[ERROR] No station returned valid data for {city}")
+    if not results:
+        print("[ERROR] No station returned valid data")
         return None
+
+    # Average AQI across all valid stations
+    aqis = [r["aqi"] for r in results]
+    avg_aqi = round(sum(aqis) / len(aqis))
+
+    # Prefer primary station's raw_data if available, otherwise the newest one
+    primary = next((r for r in results if r["sid"] == PRIMARY_STATION), None)
+    best = primary if primary else max(results, key=lambda r: r["ts"])
+
+    print(f"[OK] Averaged AQI from {len(results)} stations: {aqis} → {avg_aqi}")
 
     # Weather
     try:
         weather = fetch_weather_lahore()
         print(f"[OK] Lahore weather: {weather['temperature']}C, {weather['humidity']}% humidity")
     except Exception as e:
-        print(f"[WARN] Lahore weather fetch failed: {e}")
+        print(f"[WARN] Weather fetch failed: {e}")
         weather = {}
 
-    # Build timestamp
-    station_time = best_data["data"]["time"].get("iso") or best_data["data"]["time"].get("s")
-    try:
-        reading_ts = datetime.fromisoformat(station_time.replace("Z", "+00:00"))
-        reading_ts = reading_ts.astimezone(timezone.utc)
-    except Exception:
-        reading_ts = datetime.now(timezone.utc)
+    # Always use current time for the pipeline timestamp
+    # (station times can be stale)
+    timestamp = datetime.now(timezone.utc).isoformat()
 
-    # If the station time is older than 30 minutes, use current time instead
-    # (prevents old station readings from being treated as "latest")
-    now = datetime.now(timezone.utc)
-    if (now - reading_ts) > timedelta(minutes=30):
-        print(f"[WARN] Station reading is old ({reading_ts.isoformat()[:16]}). Using current time.")
-        reading_ts = now
-
-    timestamp = reading_ts.isoformat()
+    # Override the AQI in the raw_data so downstream code sees the average
+    raw = best["data"]["data"].copy()
+    raw["aqi"] = avg_aqi
 
     bronze_row = {
         "city": city,
         "timestamp": timestamp,
-        "raw_data": best_data["data"],
+        "raw_data": raw,
         "weather": weather,
     }
 
-    print(
-        f"[OK] Fetched AQI for {city}: {best_data['data']['aqi']} "
-        f"(reading time: {timestamp[:16]}) from station {used_station}"
-    )
+    print(f"[OK] Fetched AQI for {city}: {avg_aqi} (averaged from {len(results)} stations)")
     return bronze_row
