@@ -2,17 +2,17 @@ name: Feature Pipeline (Hourly)
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Every hour
-  workflow_dispatch:       # Manual trigger
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 jobs:
   run-feature-pipeline:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        city: [lahore]     # Easy to add more cities later: [lahore, karachi, islamabad]
-      fail-fast: false     # Continue other cities even if one fails
+        city: [lahore]
 
     steps:
       - name: Checkout code
@@ -21,20 +21,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'     # Speeds up dependency installation
+          python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run feature pipeline
-        id: pipeline
         env:
           AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          set -e   # Exit immediately if any command fails
           python pipelines/feature_pipeline.py ${{ matrix.city }}
 
       - name: Alert on failure
@@ -44,31 +44,32 @@ jobs:
           ALERT_PASSWORD: ${{ secrets.ALERT_PASSWORD }}
           ALERT_TO: ${{ secrets.ALERT_TO }}
         run: |
-          python - <<EOF
-          import smtplib
+          python - <<'PY'
           import os
+          import smtplib
           from email.mime.text import MIMEText
 
           sender = os.getenv("ALERT_EMAIL")
           password = os.getenv("ALERT_PASSWORD")
           recipient = os.getenv("ALERT_TO")
+
           city = "${{ matrix.city }}"
           run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           if not all([sender, password, recipient]):
               print("Email secrets not set - skipping alert")
-              exit(0)
+              raise SystemExit(0)
 
-          subject = f"Pearls AQI - Pipeline Failed ({city})"
-          body = f"""Feature pipeline failed for city: {city}
+          msg = MIMEText(
+              f"""Feature pipeline failed for city: {city}
 
           Run URL: {run_url}
 
           Please check the GitHub Actions logs.
           """
+          )
 
-          msg = MIMEText(body)
-          msg["Subject"] = subject
+          msg["Subject"] = f"Pearls AQI - Pipeline Failed ({city})"
           msg["From"] = sender
           msg["To"] = recipient
 
@@ -77,4 +78,4 @@ jobs:
               server.sendmail(sender, [recipient], msg.as_string())
 
           print("Alert email sent!")
-          EOF
+          PY
