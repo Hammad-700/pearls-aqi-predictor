@@ -1,6 +1,6 @@
 import os
 import sys
-import math  # Added for NaN detection
+import math
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 
@@ -32,12 +32,26 @@ GOLD_COLS = [
 ]
 
 
-# ---------- Helper: recursively clean NaN values ----------
+# ---------- Timestamp rounding ----------
+def round_to_hour(dt: datetime) -> datetime:
+    """Round down to the start of the hour."""
+    return dt.replace(minute=0, second=0, microsecond=0)
+
+def normalize_and_round_timestamp(value: str) -> str:
+    """Parse ISO timestamp, convert to UTC, and round down to hour."""
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    dt = datetime.fromisoformat(text)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt_utc = dt.astimezone(timezone.utc)
+    dt_rounded = round_to_hour(dt_utc)
+    return dt_rounded.isoformat()
+
+
+# ---------- Helper: clean NaN ----------
 def clean_nan_values(obj):
-    """
-    Recursively convert float('nan') to None in dicts and lists.
-    This guarantees JSON-serialisable data.
-    """
     if isinstance(obj, dict):
         return {k: clean_nan_values(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -55,26 +69,13 @@ def first_value(*values: Any) -> Any:
             return value
     return None
 
-
 def to_float(value: Any) -> Optional[float]:
     try:
         return None if value is None or value == "" else float(value)
     except (TypeError, ValueError):
         return None
 
-
-def normalize_timestamp(value: str) -> str:
-    text = str(value).strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    dt = datetime.fromisoformat(text)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).isoformat()
-
-
 def extract_weather(bronze: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize common weather key names returned by fetch_aqi()."""
     weather = bronze.get("weather") or {}
     current = weather.get("current") if isinstance(weather, dict) else {}
     main = weather.get("main", {}) if isinstance(weather, dict) else {}
@@ -112,7 +113,6 @@ def extract_weather(bronze: Dict[str, Any]) -> Dict[str, Any]:
         )),
     }
 
-
 def extract_station(bronze: Dict[str, Any], silver: Dict[str, Any]) -> Dict[str, Any]:
     raw = bronze.get("raw_data") or {}
     data = raw.get("data", {}) if isinstance(raw, dict) else {}
@@ -134,10 +134,12 @@ def extract_station(bronze: Dict[str, Any], silver: Dict[str, Any]) -> Dict[str,
 
 # ---------- Bronze ----------
 def save_bronze(bronze: Dict[str, Any]) -> None:
+    rounded_ts = normalize_and_round_timestamp(bronze["timestamp"])
     base = {
         "city": bronze["city"],
-        "timestamp": normalize_timestamp(bronze["timestamp"]),
+        "timestamp": rounded_ts,                     # rounded to hour
         "raw_data": bronze.get("raw_data", {}),
+        "original_timestamp": bronze["timestamp"],   # exact API time (optional)
     }
     with_weather = {**base, "weather": bronze.get("weather") or {}}
     try:
@@ -162,7 +164,6 @@ def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
         raise RuntimeError("clean_to_silver() returned no row")
     silver = dict(silver)
 
-    # Preserve weather from bronze (clean_to_silver may drop it)
     weather = extract_weather(bronze)
     for key, value in weather.items():
         if silver.get(key) is None and value is not None:
@@ -174,10 +175,15 @@ def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
             silver[key] = value
 
     silver["city"] = bronze["city"]
-    silver["timestamp"] = normalize_timestamp(bronze["timestamp"])
+    silver["timestamp"] = normalize_and_round_timestamp(bronze["timestamp"])
+
+    # Default station_id to avoid NULL in conflict key
+    if silver.get("station_id") is None:
+        silver["station_id"] = "lahore_avg"
+        silver["station_name"] = "Lahore (averaged)"
 
     supabase.table("aqi_silver_cleaned").upsert(
-        silver, on_conflict="city,timestamp"
+        silver, on_conflict="city,timestamp,station_id"
     ).execute()
 
     print(
@@ -221,14 +227,11 @@ def partial_gold(silver: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-# ---------- Gold (FIXED) ----------
+# ---------- Gold ----------
 def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
-    current_ts = silver.get("timestamp")
+    current_ts = silver["timestamp"]   # already rounded
 
-    # Remove any existing entry with the same timestamp (avoid duplicates)
     history = [r for r in history if r.get("timestamp") != current_ts]
-
-    # Always put the current silver row as the latest
     history = history + [silver]
 
     gold = build_gold_features(history)
@@ -241,18 +244,15 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     else:
         gold = dict(gold)
 
-    # Force current values (safety net)
     gold["city"] = silver["city"]
-    gold["timestamp"] = silver["timestamp"]
+    gold["timestamp"] = silver["timestamp"]   # rounded
     gold["aqi"] = silver.get("aqi")
 
-    # Station fields
-    station_id = silver.get("station_id")
-    station_name = silver.get("station_name")
+    station_id = silver.get("station_id") or "lahore_avg"
+    station_name = silver.get("station_name") or "Lahore (averaged)"
     gold["station_id"] = None if (isinstance(station_id, float) and math.isnan(station_id)) else station_id
     gold["station_name"] = None if (isinstance(station_name, float) and math.isnan(station_name)) else station_name
 
-    # Fill missing weather / pollutant fields from silver
     for key in [
         "temperature", "humidity", "pm25",
         "wind_speed", "wind_direction", "precipitation", "pressure",
@@ -270,18 +270,18 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
 
     result = (
         supabase.table("aqi_gold_features")
-        .upsert(payload, on_conflict="city,timestamp")
+        .upsert(payload, on_conflict="city,timestamp,station_id")
         .execute()
     )
     print(f"[OK] Gold saved ({len(result.data) if result.data else 'unknown'} row(s))")
     return payload
+
 
 # ---------- Pipeline runner ----------
 def run_pipeline(city: str) -> None:
     city = city.strip().lower()
     print(f"\n{'=' * 60}\nRunning feature pipeline: {city}\n{'=' * 60}")
 
-    # 1) Bronze
     bronze = fetch_aqi(city)
     if not bronze:
         raise RuntimeError(f"fetch_aqi() returned no data for {city}")
@@ -291,7 +291,6 @@ def run_pipeline(city: str) -> None:
     print(f"[DEBUG] Bronze weather = {bronze.get('weather')}")
     save_bronze(bronze)
 
-    # 2) Silver
     silver = save_silver(bronze)
     print(
         f"[DEBUG] Silver weather = temp:{silver.get('temperature')}, "
@@ -299,7 +298,6 @@ def run_pipeline(city: str) -> None:
         f"pressure:{silver.get('pressure')}"
     )
 
-    # 3) Gold
     history = get_recent_silver(city, limit=30)
     if not history:
         raise RuntimeError("No Silver history found after current write")
