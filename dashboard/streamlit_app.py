@@ -548,7 +548,7 @@ spacer()
 
 # ========== SHAP EXPLANATIONS ==========
 st.markdown("---")
-st.subheader("Why this prediction?")
+st.markdown("<h2>Why this prediction?</h2>", unsafe_allow_html=True)   # <-- changed to h2
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
@@ -602,7 +602,7 @@ spacer()
 
 # Section: Global Feature Importance (model-wide)
 st.markdown("---")
-st.subheader("Global Feature Importance (model-wide)")
+st.markdown("<h2>Global Feature Importance (model-wide)</h2>", unsafe_allow_html=True)   # <-- changed to h2
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
