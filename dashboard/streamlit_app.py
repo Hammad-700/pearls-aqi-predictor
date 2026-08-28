@@ -485,9 +485,8 @@ if forecast_x:
         mode="lines+markers",
         marker=dict(size=9)
     ))
-
-    # Optional vertical line to separate history and forecast
-    fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
+    # Optional vertical line – uncomment if desired:
+    # fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
 
 # Reference lines
 fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
