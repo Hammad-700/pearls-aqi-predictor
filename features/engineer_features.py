@@ -82,7 +82,7 @@ def build_gold_features(silver_rows: list) -> dict:
 
     # Change rate
     prev_aqi = df.iloc[-2]["aqi"]
-    latest["aqi_change_rate"] = float(latest["aqi"] - prev_aqi) if prev_aqi else None
+    latest["aqi_change_rate"] = (float(latest["aqi"] - prev_aqi) if prev_aqi else None)
 
     for col in ["temperature", "humidity", "pm25", "wind_speed",
                 "wind_direction", "precipitation", "pressure", "pm25_raw",
