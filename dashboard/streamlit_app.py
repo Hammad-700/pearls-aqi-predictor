@@ -16,7 +16,6 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-/* Main page spacing */
 .block-container {
     max-width: 1100px;
     padding-top: 2rem;
@@ -24,21 +23,17 @@ st.markdown("""
     padding-left: 2rem;
     padding-right: 2rem;
 }
-
 h1 {
     margin-top: 0rem !important;
     margin-bottom: 0.2rem !important;
 }
-
 h1 + div {
     margin-top: 0rem !important;
 }
-
 h1 + div p {
     margin-top: 0.15rem !important;
     margin-bottom: 0.15rem !important;
 }
-
 @media (max-width: 768px) {
     .forecast-card {
         height: 132px !important;
@@ -48,62 +43,50 @@ h1 + div p {
         grid-template-columns: 86px max-content !important;
         justify-content: center;
     }
-
     .forecast-aqi-box {
         flex: 0 0 86px !important;
         min-width: 0 !important;
         padding: 12px 10px !important;
     }
-
     .forecast-aqi-value {
         font-size: 34px !important;
     }
-
     .forecast-details {
         min-width: 0;
     }
-
     .forecast-label {
         font-size: 20px !important;
         overflow-wrap: anywhere;
     }
-
     .forecast-date {
         font-size: 13px !important;
         overflow-wrap: anywhere;
     }
-
     .temperature-card {
         flex-direction: row;
         align-items: center !important;
         gap: 12px !important;
         padding: 16px 20px !important;
     }
-
     .temperature-value-box {
         flex: 0 0 110px;
         min-width: 0 !important;
         padding: 14px 20px !important;
     }
-
     .temperature-value {
         font-size: 36px !important;
     }
-
     .temperature-details {
         flex: 1;
         min-width: 0;
     }
-
     .temperature-details-title {
         font-size: 20px !important;
     }
-
     .temperature-details-location {
         overflow-wrap: anywhere;
     }
 }
-
 .forecast-card {
     width: 100%;
     height: 166px;
@@ -117,19 +100,16 @@ h1 + div p {
     border-radius: 14px;
     margin: 0;
 }
-
 .forecast-card > * {
     position: relative;
     left: -3px;
 }
-
 .forecast-grid {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 }
-
 .forecast-aqi-box {
     min-width: 0;
     padding: 12px 10px;
@@ -137,39 +117,33 @@ h1 + div p {
     box-sizing: border-box;
     border-radius: 10px;
 }
-
 .forecast-aqi-value {
     font-size: 44px;
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
 }
-
 .forecast-aqi-caption {
     font-size: 11px;
     margin-top: 4px;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
-
 .forecast-details {
     flex: 1 1 auto;
     min-width: 0;
 }
-
 .forecast-label {
     font-size: 22px;
     font-weight: 700;
     line-height: 1.15;
 }
-
 .forecast-date {
     font-size: 15px;
     margin-top: 6px;
     opacity: 0.8;
     white-space: nowrap;
 }
-
 @media (max-width: 768px) {
     .forecast-grid {
         grid-template-columns: 1fr;
@@ -494,7 +468,7 @@ if history:
         connectgaps=False
     ))
 
-# ---------- Forecast line (ONLY future dates) ----------
+# ---------- Forecast line (starts only on future dates) ----------
 as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
 forecast_x = []
@@ -504,17 +478,17 @@ for f in forecast:
     forecast_x.append(f_date)
     forecast_y.append(f["aqi"])
 
-if forecast_x:
-    fig.add_trace(go.Scatter(
-        x=forecast_x,
-        y=forecast_y,
-        name="Forecast AQI",
-        line=dict(color="#ff4b4b", dash="dash", width=2),
-        mode="lines+markers",
-        marker=dict(size=9)
-    ))
+fig.add_trace(go.Scatter(
+    x=forecast_x,
+    y=forecast_y,
+    name="Forecast AQI",
+    line=dict(color="#ff4b4b", dash="dash", width=2),
+    mode="lines+markers",
+    marker=dict(size=9)
+))
 
-    # Optional vertical line to separate history and forecast
+# Optional vertical line at forecast start
+if forecast_x:
     fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
 
 # Reference lines
@@ -549,4 +523,62 @@ try:
     else:
         importances = [0.0] * len(FEATURE_COLS)
     importances = importances / importances.sum()
-except
+except Exception:
+    importances = [0.0] * len(FEATURE_COLS)
+
+feature_labels = {
+    "city_encoded": "City",
+    "hour": "Hour of Day",
+    "day_of_week": "Day of Week",
+    "month": "Month",
+    "aqi_lag_1h": "AQI 1 Hour Ago",
+    "aqi_lag_24h": "AQI 24 Hours Ago",
+    "aqi_roll_mean_24h": "24h Rolling Average",
+    "aqi_change_rate": "AQI Change Rate",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "wind_speed": "Wind Speed",
+    "wind_direction": "Wind Direction",
+    "precipitation": "Precipitation",
+    "pressure": "Pressure",
+    "pm25_raw": "PM2.5 Raw",
+    "pm10_raw": "PM10 Raw",
+    "no2_raw": "NO2 Raw",
+    "o3_raw": "O3 Raw",
+}
+
+importance_data = {
+    "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],
+    "Importance": importances
+}
+
+import pandas as pd
+import plotly.graph_objects as go
+imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
+fig2 = go.Figure(go.Bar(
+    x=imp_df["Importance"], y=imp_df["Feature"],
+    orientation="h", marker_color="#1f77b4"
+))
+fig2.update_layout(
+    title="Feature Importance (Random Forest built-in)",
+    height=400,
+    plot_bgcolor="rgba(0,0,0,0)",
+    margin=dict(t=40, b=40)
+)
+st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+
+spacer()
+st.markdown("---")
+st.markdown("<h2>Model Limitations</h2>", unsafe_allow_html=True)
+st.markdown("""
+- **Training data uses synthetic backfill for first 30 days** – accuracy improves as real hourly data accumulates.
+- **Only Lahore supported** – single station means total data loss if station goes offline.
+- **AQI station updates every 4–6 hours**, not every minute.
+- **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
+""")
+
+spacer()
+
+# Footer
+st.markdown("---")
+st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM")
