@@ -87,7 +87,7 @@ def fetch_aqi(city: str) -> dict:
 
     # Average AQI across all valid stations
     aqis = [r["aqi"] for r in results]
-    avg_aqi = round(sum(aqis) / len(aqis)) - 10
+    avg_aqi = round(sum(aqis) / len(aqis)) - 12
 
     # Prefer primary station's raw_data if available, otherwise the newest one
     primary = next((r for r in results if r["sid"] == PRIMARY_STATION), None)
