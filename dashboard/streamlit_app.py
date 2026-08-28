@@ -301,7 +301,7 @@ def get_shap_background(city, _le, feature_cols):
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
     df = df.reindex(columns=feature_cols, fill_value=0)
-    return df   # even if only 1 row, we'll try
+    return df
 
 def compute_shap_importance(model, model_type, X_background):
     import shap
@@ -553,6 +553,10 @@ st.markdown("---")
 st.subheader("Why this prediction?")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
+# If explainer is None but we have X, use X as background
+if shap_explainer is None and X is not None:
+    shap_explainer = load_shap_explainer(model, X)
+
 if shap_explainer is not None and X is not None:
     try:
         shap_values = shap_explainer.shap_values(X)
@@ -593,7 +597,7 @@ if shap_explainer is not None and X is not None:
     except Exception as e:
         st.warning(f"Could not compute SHAP explanation: {e}")
 else:
-    st.info("Not enough background data to compute SHAP explanations (need at least 1 row).")
+    st.info("No data available for SHAP explanation. Please ensure Gold table has at least one row.")
 
 spacer()
 
