@@ -6,6 +6,7 @@ import joblib
 import tempfile
 import numpy as np
 import os
+import shap
 from datetime import datetime, timedelta, timezone
 
 st.set_page_config(
@@ -16,32 +17,24 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-/* Main page spacing */
 .block-container {
     max-width: 1100px;
-    padding-top: 2rem;          /* ← more breathing room under the header */
+    padding-top: 2rem;
     padding-bottom: 1rem;
     padding-left: 2rem;
     padding-right: 2rem;
 }
-
-/* Reduce space below main title */
 h1 {
     margin-top: 0rem !important;
     margin-bottom: 0.2rem !important;
 }
-
-/* Reduce spacing around the header markdown */
 h1 + div {
     margin-top: 0rem !important;
 }
-
-/* Reduce paragraph spacing inside header */
 h1 + div p {
     margin-top: 0.15rem !important;
     margin-bottom: 0.15rem !important;
 }
-
 @media (max-width: 768px) {
     .forecast-card {
         height: 132px !important;
@@ -51,62 +44,50 @@ h1 + div p {
         grid-template-columns: 86px max-content !important;
         justify-content: center;
     }
-
     .forecast-aqi-box {
         flex: 0 0 86px !important;
         min-width: 0 !important;
         padding: 12px 10px !important;
     }
-
     .forecast-aqi-value {
         font-size: 34px !important;
     }
-
     .forecast-details {
         min-width: 0;
     }
-
     .forecast-label {
         font-size: 20px !important;
         overflow-wrap: anywhere;
     }
-
     .forecast-date {
         font-size: 13px !important;
         overflow-wrap: anywhere;
     }
-
     .temperature-card {
         flex-direction: row;
         align-items: center !important;
         gap: 12px !important;
         padding: 16px 20px !important;
     }
-
     .temperature-value-box {
         flex: 0 0 110px;
         min-width: 0 !important;
         padding: 14px 20px !important;
     }
-
     .temperature-value {
         font-size: 36px !important;
     }
-
     .temperature-details {
         flex: 1;
         min-width: 0;
     }
-
     .temperature-details-title {
         font-size: 20px !important;
     }
-
     .temperature-details-location {
         overflow-wrap: anywhere;
     }
 }
-
 .forecast-card {
     width: 100%;
     height: 166px;
@@ -120,19 +101,16 @@ h1 + div p {
     border-radius: 14px;
     margin: 0;
 }
-
 .forecast-card > * {
     position: relative;
     left: -3px;
 }
-
 .forecast-grid {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 }
-
 .forecast-aqi-box {
     min-width: 0;
     padding: 12px 10px;
@@ -140,39 +118,33 @@ h1 + div p {
     box-sizing: border-box;
     border-radius: 10px;
 }
-
 .forecast-aqi-value {
     font-size: 44px;
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
 }
-
 .forecast-aqi-caption {
     font-size: 11px;
     margin-top: 4px;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
-
 .forecast-details {
     flex: 1 1 auto;
     min-width: 0;
 }
-
 .forecast-label {
     font-size: 22px;
     font-weight: 700;
     line-height: 1.15;
 }
-
 .forecast-date {
     font-size: 15px;
     margin-top: 6px;
     opacity: 0.8;
     white-space: nowrap;
 }
-
 @media (max-width: 768px) {
     .forecast-grid {
         grid-template-columns: 1fr;
@@ -217,6 +189,22 @@ def load_model():
     except Exception as e:
         st.error(f"Model load error: {e}")
         return None, None, None, None, None
+
+@st.cache_resource(ttl=3600)
+def load_shap_explainer(model, X_background):
+    """Return a SHAP explainer for the given model and background data."""
+    try:
+        # For tree-based models (RandomForest, XGBoost, LightGBM)
+        if hasattr(model, 'estimators_') or hasattr(model, 'get_booster'):
+            return shap.TreeExplainer(model)
+        # Linear models
+        elif hasattr(model, 'coef_'):
+            return shap.LinearExplainer(model, X_background)
+        else:
+            return None
+    except Exception as e:
+        st.warning(f"Could not create SHAP explainer: {e}")
+        return None
 
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
@@ -269,7 +257,11 @@ def predict(city, model, le, feature_cols=None):
     }
     X = pd.DataFrame([features]).reindex(columns=feature_cols, fill_value=0)
     X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
-    preds = model.predict(X)[0]
+    try:
+        preds = model.predict(X)[0]
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        return None, None, None
     as_of = row["timestamp"]
     base_date = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
     forecast = []
@@ -279,11 +271,11 @@ def predict(city, model, le, feature_cols=None):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    return forecast, row["timestamp"], row
+    # Return also the feature vector for SHAP
+    return forecast, row["timestamp"], row, X
 
 def get_history(city):
     sb = get_supabase()
-    from datetime import datetime, timezone, timedelta
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
@@ -341,6 +333,12 @@ if model is None:
     st.error("Model not loaded!")
     st.stop()
 
+# Load SHAP background data (cached)
+background_df = get_shap_background("lahore", le, model_feature_cols)
+shap_explainer = None
+if background_df is not None and len(background_df) >= 10:
+    shap_explainer = load_shap_explainer(model, background_df)
+
 # Sidebar
 with st.sidebar:
     st.header("Settings")
@@ -358,15 +356,17 @@ with st.sidebar:
 
 # Fetch data
 with st.spinner(f"Fetching forecast for {city}..."):
-    forecast, as_of, latest_row = predict(city, model, le)
+    forecast, as_of, latest_row, X = predict(city, model, le, model_feature_cols)
     history = get_history(city)
+
+if forecast is None or len(forecast) == 0:
+    st.error("No forecast available. Please ensure the model is trained and Gold data exists.")
+    st.stop()
 
 current_aqi = latest_row.get("aqi", 0)
 current_temperature = latest_row.get("temperature")
 
 # Staleness check + Pakistan Time
-from datetime import datetime, timezone, timedelta
-
 PKT = timezone(timedelta(hours=5))
 
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
@@ -500,10 +500,9 @@ if history:
         connectgaps=False
     ))
 
-# ---------- Forecast line ----------
+# ---------- Forecast line (connects from last historical point) ----------
 as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
-# Use the very last historical point as the starting point of the forecast
 if history:
     last_hist_ts = hist_df["timestamp"].iloc[-1]
     last_hist_aqi = hist_df["aqi"].iloc[-1]
@@ -515,7 +514,6 @@ forecast_x = [last_hist_ts]
 forecast_y = [last_hist_aqi]
 
 for f in forecast:
-    # Place forecast at noon PKT of that day
     f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
     forecast_x.append(f_date)
     forecast_y.append(f["aqi"])
@@ -546,11 +544,67 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
+spacer()
 
+# ========== NEW: SHAP EXPLANATIONS ==========
+st.markdown("---")
+st.subheader("Why this prediction?")
+st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
+
+if shap_explainer is not None and X is not None:
+    try:
+        # Compute SHAP values for the current instance
+        shap_values = shap_explainer.shap_values(X)
+        # If shap_values is a list (multi-output), take first output (24h forecast)
+        if isinstance(shap_values, list):
+            shap_values = shap_values[0]
+        # shap_values shape: (1, n_features) -> flatten
+        shap_vals = shap_values.flatten() if len(shap_values.shape) > 1 else shap_values
+        # Create DataFrame
+        feature_names = model_feature_cols if model_feature_cols else X.columns.tolist()
+        shap_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Contribution': shap_vals
+        }).sort_values('Contribution', ascending=False)
+
+        # Top increases and decreases
+        top_inc = shap_df[shap_df['Contribution'] > 0].head(3)
+        top_dec = shap_df[shap_df['Contribution'] < 0].tail(3)
+
+        if not top_inc.empty:
+            st.markdown(f"**Top increase:** {top_inc.iloc[0]['Feature']} (+{top_inc.iloc[0]['Contribution']:.2f})")
+        if not top_dec.empty:
+            st.markdown(f"**Top decrease:** {top_dec.iloc[0]['Feature']} ({top_dec.iloc[0]['Contribution']:.2f})")
+
+        # Plot horizontal bar chart (positive = red, negative = blue)
+        colors = ['#ff4b4b' if c > 0 else '#1f77b4' for c in shap_df['Contribution']]
+        fig_shap = go.Figure(go.Bar(
+            x=shap_df['Contribution'],
+            y=shap_df['Feature'],
+            orientation='h',
+            marker_color=colors,
+            text=[f"{c:+.2f}" for c in shap_df['Contribution']],
+            textposition='outside'
+        ))
+        fig_shap.update_layout(
+            title="Feature contributions to the 24‑hour forecast",
+            xaxis_title="SHAP value (impact on AQI)",
+            height=max(400, 30 * len(shap_df)),
+            margin=dict(t=40, b=40),
+            plot_bgcolor='rgba(0,0,0,0)'
+        )
+        st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
+
+    except Exception as e:
+        st.warning(f"Could not compute SHAP explanation: {e}")
+else:
+    st.info("Not enough background data to compute SHAP explanations (need at least 10 rows with lag features).")
 
 spacer()
+
+# Section: Feature Importance (existing)
 st.markdown("---")
-st.subheader("What drives AQI predictions? (Feature Importance)")
+st.subheader("Global Feature Importance (model-wide)")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
@@ -563,7 +617,7 @@ try:
     else:
         importances = [0.0] * len(FEATURE_COLS)
     importances = importances / importances.sum()
-except:
+except Exception:
     importances = [0.0] * len(FEATURE_COLS)
 
 feature_labels = {
@@ -592,8 +646,6 @@ importance_data = {
     "Importance": importances
 }
 
-import pandas as pd
-import plotly.graph_objects as go
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
     x=imp_df["Importance"], y=imp_df["Feature"],
@@ -617,12 +669,7 @@ st.markdown("""
 - **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
 """)
 
-# ==========================================================
-# END OF NEW SECTIONS
-# ==========================================================
-
 spacer()
 
-# Footer
 st.markdown("---")
 st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM")
