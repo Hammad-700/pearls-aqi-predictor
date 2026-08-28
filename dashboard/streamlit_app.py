@@ -547,6 +547,66 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
+
+spacer()
+st.markdown("---")
+st.subheader("What drives AQI predictions? (Feature Importance)")
+st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
+
+try:
+    import numpy as np
+    base_estimator = model.estimators_[0]
+    if hasattr(base_estimator, 'feature_importances_'):
+        importances = np.mean([e.feature_importances_ for e in model.estimators_], axis=0)
+    elif hasattr(base_estimator, 'coef_'):
+        importances = np.abs(base_estimator.coef_)
+    else:
+        importances = [0.0] * len(FEATURE_COLS)
+    importances = importances / importances.sum()
+except:
+    importances = [0.0] * len(FEATURE_COLS)
+
+feature_labels = {
+    "city_encoded": "City",
+    "hour": "Hour of Day",
+    "day_of_week": "Day of Week",
+    "month": "Month",
+    "aqi_lag_1h": "AQI 1 Hour Ago",
+    "aqi_lag_24h": "AQI 24 Hours Ago",
+    "aqi_roll_mean_24h": "24h Rolling Average",
+    "aqi_change_rate": "AQI Change Rate",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "wind_speed": "Wind Speed",
+    "wind_direction": "Wind Direction",
+    "precipitation": "Precipitation",
+    "pressure": "Pressure",
+    "pm25_raw": "PM2.5 Raw",
+    "pm10_raw": "PM10 Raw",
+    "no2_raw": "NO2 Raw",
+    "o3_raw": "O3 Raw",
+}
+
+importance_data = {
+    "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],
+    "Importance": importances
+}
+
+import pandas as pd
+import plotly.graph_objects as go
+imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
+fig2 = go.Figure(go.Bar(
+    x=imp_df["Importance"], y=imp_df["Feature"],
+    orientation="h", marker_color="#1f77b4"
+))
+fig2.update_layout(
+    title="Feature Importance (Random Forest built-in)",
+    height=400,
+    plot_bgcolor="rgba(0,0,0,0)",
+    margin=dict(t=40, b=40)
+)
+st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+
 spacer()
 st.markdown("---")
 st.markdown("<h2>Model Limitations</h2>", unsafe_allow_html=True)
