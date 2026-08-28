@@ -105,8 +105,7 @@ def fetch_aqi(city: str) -> dict:
 
     # Always use current time for the pipeline timestamp
     # (station times can be stale)
-    timestamp = datetime.now(timezone.utc).isoformat()
-
+    timestamp = best["ts"].isoformat()
     # Override the AQI in the raw_data so downstream code sees the average
     raw = best["data"]["data"].copy()
     raw["aqi"] = avg_aqi
