@@ -177,13 +177,14 @@ def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
     silver["city"] = bronze["city"]
     silver["timestamp"] = normalize_and_round_timestamp(bronze["timestamp"])
 
-    # Default station_id to avoid NULL in conflict key
+    # Default station_id to avoid NULL in conflict key (optional)
     if silver.get("station_id") is None:
         silver["station_id"] = "lahore_avg"
         silver["station_name"] = "Lahore (averaged)"
 
+    # ★ FIX: use only (city, timestamp) for conflict
     supabase.table("aqi_silver_cleaned").upsert(
-        silver, on_conflict="city,timestamp,station_id"
+        silver, on_conflict="city,timestamp"
     ).execute()
 
     print(
@@ -268,9 +269,10 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
 
     print(f"[DEBUG] Cleaned Gold payload (aqi={payload.get('aqi')}, lag1={payload.get('aqi_lag_1h')})")
 
+    # ★ FIX: use only (city, timestamp) for conflict
     result = (
         supabase.table("aqi_gold_features")
-        .upsert(payload, on_conflict="city,timestamp,station_id")
+        .upsert(payload, on_conflict="city,timestamp")
         .execute()
     )
     print(f"[OK] Gold saved ({len(result.data) if result.data else 'unknown'} row(s))")
