@@ -16,24 +16,32 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
+/* Main page spacing */
 .block-container {
     max-width: 1100px;
-    padding-top: 2rem;
+    padding-top: 2rem;          /* ← more breathing room under the header */
     padding-bottom: 1rem;
     padding-left: 2rem;
     padding-right: 2rem;
 }
+
+/* Reduce space below main title */
 h1 {
     margin-top: 0rem !important;
     margin-bottom: 0.2rem !important;
 }
+
+/* Reduce spacing around the header markdown */
 h1 + div {
     margin-top: 0rem !important;
 }
+
+/* Reduce paragraph spacing inside header */
 h1 + div p {
     margin-top: 0.15rem !important;
     margin-bottom: 0.15rem !important;
 }
+
 @media (max-width: 768px) {
     .forecast-card {
         height: 132px !important;
@@ -43,50 +51,62 @@ h1 + div p {
         grid-template-columns: 86px max-content !important;
         justify-content: center;
     }
+
     .forecast-aqi-box {
         flex: 0 0 86px !important;
         min-width: 0 !important;
         padding: 12px 10px !important;
     }
+
     .forecast-aqi-value {
         font-size: 34px !important;
     }
+
     .forecast-details {
         min-width: 0;
     }
+
     .forecast-label {
         font-size: 20px !important;
         overflow-wrap: anywhere;
     }
+
     .forecast-date {
         font-size: 13px !important;
         overflow-wrap: anywhere;
     }
+
     .temperature-card {
         flex-direction: row;
         align-items: center !important;
         gap: 12px !important;
         padding: 16px 20px !important;
     }
+
     .temperature-value-box {
         flex: 0 0 110px;
         min-width: 0 !important;
         padding: 14px 20px !important;
     }
+
     .temperature-value {
         font-size: 36px !important;
     }
+
     .temperature-details {
         flex: 1;
         min-width: 0;
     }
+
     .temperature-details-title {
         font-size: 20px !important;
     }
+
     .temperature-details-location {
         overflow-wrap: anywhere;
     }
 }
+
 .forecast-card {
     width: 100%;
     height: 166px;
@@ -100,16 +120,19 @@ h1 + div p {
     border-radius: 14px;
     margin: 0;
 }
+
 .forecast-card > * {
     position: relative;
     left: -3px;
 }
+
 .forecast-grid {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 }
+
 .forecast-aqi-box {
     min-width: 0;
     padding: 12px 10px;
@@ -117,33 +140,39 @@ h1 + div p {
     box-sizing: border-box;
     border-radius: 10px;
 }
+
 .forecast-aqi-value {
     font-size: 44px;
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
 }
+
 .forecast-aqi-caption {
     font-size: 11px;
     margin-top: 4px;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
+
 .forecast-details {
     flex: 1 1 auto;
     min-width: 0;
 }
+
 .forecast-label {
     font-size: 22px;
     font-weight: 700;
     line-height: 1.15;
 }
+
 .forecast-date {
     font-size: 15px;
     margin-top: 6px;
     opacity: 0.8;
     white-space: nowrap;
 }
+
 @media (max-width: 768px) {
     .forecast-grid {
         grid-template-columns: 1fr;
@@ -254,6 +283,7 @@ def predict(city, model, le, feature_cols=None):
 
 def get_history(city):
     sb = get_supabase()
+    from datetime import datetime, timezone, timedelta
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
@@ -335,6 +365,8 @@ current_aqi = latest_row.get("aqi", 0)
 current_temperature = latest_row.get("temperature")
 
 # Staleness check + Pakistan Time
+from datetime import datetime, timezone, timedelta
+
 PKT = timezone(timedelta(hours=5))
 
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
@@ -468,25 +500,34 @@ if history:
         connectgaps=False
     ))
 
-# ---------- Forecast line (starts only on future dates) ----------
-forecast_x = []
-forecast_y = []
+# ---------- Forecast line ----------
+as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
+
+# Use the very last historical point as the starting point of the forecast
+if history:
+    last_hist_ts = hist_df["timestamp"].iloc[-1]
+    last_hist_aqi = hist_df["aqi"].iloc[-1]
+else:
+    last_hist_ts = as_of_dt
+    last_hist_aqi = int(latest_row.get("aqi", 0))
+
+forecast_x = [last_hist_ts]
+forecast_y = [last_hist_aqi]
+
 for f in forecast:
+    # Place forecast at noon PKT of that day
     f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
     forecast_x.append(f_date)
     forecast_y.append(f["aqi"])
 
-if forecast_x:
-    fig.add_trace(go.Scatter(
-        x=forecast_x,
-        y=forecast_y,
-        name="Forecast AQI",
-        line=dict(color="#ff4b4b", dash="dash", width=2),
-        mode="lines+markers",
-        marker=dict(size=9)
-    ))
-    # Optional vertical line – uncomment if desired:
-    # fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
+fig.add_trace(go.Scatter(
+    x=forecast_x,
+    y=forecast_y,
+    name="Forecast AQI",
+    line=dict(color="#ff4b4b", dash="dash", width=2),
+    mode="lines+markers",
+    marker=dict(size=9)
+))
 
 # Reference lines
 fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
@@ -505,6 +546,8 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
+
+
 spacer()
 st.markdown("---")
 st.subheader("What drives AQI predictions? (Feature Importance)")
@@ -520,7 +563,7 @@ try:
     else:
         importances = [0.0] * len(FEATURE_COLS)
     importances = importances / importances.sum()
-except Exception:
+except:
     importances = [0.0] * len(FEATURE_COLS)
 
 feature_labels = {
@@ -549,6 +592,8 @@ importance_data = {
     "Importance": importances
 }
 
+import pandas as pd
+import plotly.graph_objects as go
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
     x=imp_df["Importance"], y=imp_df["Feature"],
@@ -572,7 +617,12 @@ st.markdown("""
 - **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
 """)
 
+# ==========================================================
+# END OF NEW SECTIONS
+# ==========================================================
+
 spacer()
 
+# Footer
 st.markdown("---")
 st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM")
