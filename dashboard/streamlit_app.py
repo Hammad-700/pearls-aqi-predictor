@@ -19,24 +19,21 @@ st.markdown("""
 /* Main page spacing */
 .block-container {
     max-width: 1100px;
-    padding-top: 2rem;          /* ← more breathing room under the header */
+    padding-top: 2rem;
     padding-bottom: 1rem;
     padding-left: 2rem;
     padding-right: 2rem;
 }
 
-/* Reduce space below main title */
 h1 {
     margin-top: 0rem !important;
     margin-bottom: 0.2rem !important;
 }
 
-/* Reduce spacing around the header markdown */
 h1 + div {
     margin-top: 0rem !important;
 }
 
-/* Reduce paragraph spacing inside header */
 h1 + div p {
     margin-top: 0.15rem !important;
     margin-bottom: 0.15rem !important;
@@ -283,7 +280,6 @@ def predict(city, model, le, feature_cols=None):
 
 def get_history(city):
     sb = get_supabase()
-    from datetime import datetime, timezone, timedelta
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
@@ -365,8 +361,6 @@ current_aqi = latest_row.get("aqi", 0)
 current_temperature = latest_row.get("temperature")
 
 # Staleness check + Pakistan Time
-from datetime import datetime, timezone, timedelta
-
 PKT = timezone(timedelta(hours=5))
 
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
@@ -500,34 +494,28 @@ if history:
         connectgaps=False
     ))
 
-# ---------- Forecast line ----------
+# ---------- Forecast line (ONLY future dates) ----------
 as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
-# Use the very last historical point as the starting point of the forecast
-if history:
-    last_hist_ts = hist_df["timestamp"].iloc[-1]
-    last_hist_aqi = hist_df["aqi"].iloc[-1]
-else:
-    last_hist_ts = as_of_dt
-    last_hist_aqi = int(latest_row.get("aqi", 0))
-
-forecast_x = [last_hist_ts]
-forecast_y = [last_hist_aqi]
-
+forecast_x = []
+forecast_y = []
 for f in forecast:
-    # Place forecast at noon PKT of that day
     f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
     forecast_x.append(f_date)
     forecast_y.append(f["aqi"])
 
-fig.add_trace(go.Scatter(
-    x=forecast_x,
-    y=forecast_y,
-    name="Forecast AQI",
-    line=dict(color="#ff4b4b", dash="dash", width=2),
-    mode="lines+markers",
-    marker=dict(size=9)
-))
+if forecast_x:
+    fig.add_trace(go.Scatter(
+        x=forecast_x,
+        y=forecast_y,
+        name="Forecast AQI",
+        line=dict(color="#ff4b4b", dash="dash", width=2),
+        mode="lines+markers",
+        marker=dict(size=9)
+    ))
+
+    # Optional vertical line to separate history and forecast
+    fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
 
 # Reference lines
 fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
@@ -546,8 +534,6 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-
-
 spacer()
 st.markdown("---")
 st.subheader("What drives AQI predictions? (Feature Importance)")
@@ -563,66 +549,4 @@ try:
     else:
         importances = [0.0] * len(FEATURE_COLS)
     importances = importances / importances.sum()
-except:
-    importances = [0.0] * len(FEATURE_COLS)
-
-feature_labels = {
-    "city_encoded": "City",
-    "hour": "Hour of Day",
-    "day_of_week": "Day of Week",
-    "month": "Month",
-    "aqi_lag_1h": "AQI 1 Hour Ago",
-    "aqi_lag_24h": "AQI 24 Hours Ago",
-    "aqi_roll_mean_24h": "24h Rolling Average",
-    "aqi_change_rate": "AQI Change Rate",
-    "temperature": "Temperature",
-    "humidity": "Humidity",
-    "wind_speed": "Wind Speed",
-    "wind_direction": "Wind Direction",
-    "precipitation": "Precipitation",
-    "pressure": "Pressure",
-    "pm25_raw": "PM2.5 Raw",
-    "pm10_raw": "PM10 Raw",
-    "no2_raw": "NO2 Raw",
-    "o3_raw": "O3 Raw",
-}
-
-importance_data = {
-    "Feature": [feature_labels.get(f, f) for f in FEATURE_COLS],
-    "Importance": importances
-}
-
-import pandas as pd
-import plotly.graph_objects as go
-imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
-fig2 = go.Figure(go.Bar(
-    x=imp_df["Importance"], y=imp_df["Feature"],
-    orientation="h", marker_color="#1f77b4"
-))
-fig2.update_layout(
-    title="Feature Importance (Random Forest built-in)",
-    height=400,
-    plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(t=40, b=40)
-)
-st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-
-spacer()
-st.markdown("---")
-st.markdown("<h2>Model Limitations</h2>", unsafe_allow_html=True)
-st.markdown("""
-- **Training data uses synthetic backfill for first 30 days** – accuracy improves as real hourly data accumulates.
-- **Only Lahore supported** – single station means total data loss if station goes offline.
-- **AQI station updates every 4–6 hours**, not every minute.
-- **Expanded weather features are currently based on a short historical window** and should be re‑evaluated as more real observations accumulate.
-""")
-
-# ==========================================================
-# END OF NEW SECTIONS
-# ==========================================================
-
-spacer()
-
-# Footer
-st.markdown("---")
-st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM")
+except
