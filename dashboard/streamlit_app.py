@@ -8,6 +8,7 @@ import numpy as np
 import os
 import shap
 from datetime import datetime, timedelta, timezone
+from sklearn.multioutput import MultiOutputRegressor   # <-- new import
 
 st.set_page_config(
     page_title="Pearls AQI Predictor 🇵🇰",
@@ -193,12 +194,17 @@ def load_model():
 def load_shap_explainer(model, X_background):
     """Return a SHAP explainer for the given model and background data."""
     try:
-        # For tree-based models (RandomForest, XGBoost, LightGBM)
-        if hasattr(model, 'estimators_') or hasattr(model, 'get_booster'):
-            return shap.TreeExplainer(model)
-        # Linear models
-        elif hasattr(model, 'coef_'):
-            return shap.LinearExplainer(model, X_background)
+        # If the model is a MultiOutputRegressor, extract the first base estimator
+        if isinstance(model, MultiOutputRegressor):
+            base_model = model.estimators_[0]
+        else:
+            base_model = model
+
+        # Create explainer based on base_model
+        if hasattr(base_model, 'estimators_') or hasattr(base_model, 'get_booster'):
+            return shap.TreeExplainer(base_model)
+        elif hasattr(base_model, 'coef_'):
+            return shap.LinearExplainer(base_model, X_background)
         else:
             return None
     except Exception as e:
@@ -552,6 +558,7 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 if shap_explainer is not None and X is not None:
     try:
         shap_values = shap_explainer.shap_values(X)
+        # If shap_values is a list (multi-output), take first output (24h forecast)
         if isinstance(shap_values, list):
             shap_values = shap_values[0]
         shap_vals = shap_values.flatten() if len(shap_values.shape) > 1 else shap_values
@@ -600,7 +607,12 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
     import numpy as np
-    base_estimator = model.estimators_[0]
+    # Use the first estimator if multi-output
+    if isinstance(model, MultiOutputRegressor):
+        base_estimator = model.estimators_[0]
+    else:
+        base_estimator = model.estimators_[0] if hasattr(model, 'estimators_') else model
+
     if hasattr(base_estimator, 'feature_importances_'):
         importances = np.mean([e.feature_importances_ for e in model.estimators_], axis=0)
     elif hasattr(base_estimator, 'coef_'):
