@@ -332,7 +332,6 @@ if model is None:
     st.error("Model not loaded!")
     st.stop()
 
-
 # Load background (for SHAP)
 background_df = get_shap_background("lahore", le, model_feature_cols)
 shap_explainer = None
@@ -575,6 +574,7 @@ try:
         if not top_dec.empty:
             st.markdown(f"**Top decrease:** {top_dec.iloc[0]['Feature']} ({top_dec.iloc[0]['Contribution']:.2f})")
 
+        # --- STYLED SHAP CHART ---
         colors = ['#ff4b4b' if c > 0 else '#1f77b4' for c in shap_df['Contribution']]
         fig_shap = go.Figure(go.Bar(
             x=shap_df['Contribution'],
@@ -582,15 +582,42 @@ try:
             orientation='h',
             marker_color=colors,
             text=[f"{c:+.2f}" for c in shap_df['Contribution']],
-            textposition='outside'
+            textposition='outside',
+            hoverinfo='x+y',
+            opacity=0.85
         ))
+
+        # Add zero line
+        fig_shap.add_vline(x=0, line_dash="dash", line_color="gray", opacity=0.5)
+
         fig_shap.update_layout(
-            title="Feature contributions to the 24‑hour forecast",
-            xaxis_title="SHAP value (impact on AQI)",
-            height=max(400, 30 * len(shap_df)),
-            margin=dict(t=40, b=40),
-            plot_bgcolor='rgba(0,0,0,0)'
+            title=dict(
+                text="Feature contributions to the 24‑hour forecast",
+                font=dict(size=18, color="#1f1f1f")
+            ),
+            xaxis_title=dict(
+                text="SHAP value (impact on AQI)",
+                font=dict(size=14)
+            ),
+            yaxis=dict(
+                tickfont=dict(size=13),
+                autorange="reversed"
+            ),
+            height=max(450, 35 * len(shap_df)),
+            margin=dict(l=100, r=60, t=50, b=40),
+            plot_bgcolor='#f8f9fa',
+            paper_bgcolor='white',
+            template='plotly_white',
+            bargap=0.3
         )
+
+        fig_shap.update_traces(
+            marker=dict(
+                line=dict(width=0.5, color='rgba(0,0,0,0.1)')
+            ),
+            textfont=dict(size=12, color='black')
+        )
+
         st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
     else:
         st.info("No SHAP explainer available. Showing global feature importance below.")
