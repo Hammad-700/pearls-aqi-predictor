@@ -192,21 +192,33 @@ def load_model():
         return None, None, None, None, None
 
 def load_shap_explainer(model, X_background):
-    """Return a SHAP explainer for the given model and background data."""
+    """Return a SHAP explainer with automatic fallback to KernelExplainer."""
     try:
+        # 1. Try to get the underlying model if it's a wrapper
         if isinstance(model, MultiOutputRegressor):
+            base_model = model.estimators_[0]
+        elif hasattr(model, 'estimators_'):
             base_model = model.estimators_[0]
         else:
             base_model = model
-        if hasattr(base_model, 'estimators_') or hasattr(base_model, 'get_booster'):
+
+        # 2. Try TreeExplainer for tree-based models
+        if hasattr(base_model, 'feature_importances_') or hasattr(base_model, 'get_booster'):
             return shap.TreeExplainer(base_model)
+        # 3. Try LinearExplainer for linear models
         elif hasattr(base_model, 'coef_'):
             return shap.LinearExplainer(base_model, X_background)
+        # 4. Fallback to KernelExplainer (works for any model)
         else:
-            return None
+            return shap.KernelExplainer(model.predict, X_background)
     except Exception as e:
-        st.warning(f"Could not create SHAP explainer: {e}")
-        return None
+        st.warning(f"SHAP Tree/LinearExplainer failed: {e}. Trying KernelExplainer...")
+        try:
+            # Last resort: KernelExplainer with the model's predict method
+            return shap.KernelExplainer(model.predict, X_background)
+        except Exception as e2:
+            st.error(f"KernelExplainer also failed: {e2}")
+            return None
 
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
@@ -320,7 +332,10 @@ if model is None:
     st.error("Model not loaded!")
     st.stop()
 
-# Load background (for SHAP) – will attempt later if needed
+# Debug: show model type (remove later)
+st.write("Model type:", type(model))
+
+# Load background (for SHAP)
 background_df = get_shap_background("lahore", le, model_feature_cols)
 shap_explainer = None
 if background_df is not None and len(background_df) >= 1:
