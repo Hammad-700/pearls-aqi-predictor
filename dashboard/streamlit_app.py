@@ -8,7 +8,7 @@ import numpy as np
 import os
 import shap
 from datetime import datetime, timedelta, timezone
-from sklearn.multioutput import MultiOutputRegressor   # <-- new import
+from sklearn.multioutput import MultiOutputRegressor
 
 st.set_page_config(
     page_title="Pearls AQI Predictor 🇵🇰",
@@ -194,13 +194,11 @@ def load_model():
 def load_shap_explainer(model, X_background):
     """Return a SHAP explainer for the given model and background data."""
     try:
-        # If the model is a MultiOutputRegressor, extract the first base estimator
         if isinstance(model, MultiOutputRegressor):
             base_model = model.estimators_[0]
         else:
             base_model = model
 
-        # Create explainer based on base_model
         if hasattr(base_model, 'estimators_') or hasattr(base_model, 'get_booster'):
             return shap.TreeExplainer(base_model)
         elif hasattr(base_model, 'coef_'):
@@ -290,10 +288,10 @@ def get_history(city):
 @st.cache_data(ttl=300)
 def get_shap_background(city, _le, feature_cols):
     sb = get_supabase()
+    # Fetch latest 100 rows – no filter on lags
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
-        .not_.is_("aqi_lag_1h", "null")\
-        .order("timestamp", desc=True).limit(50).execute()
+        .order("timestamp", desc=True).limit(100).execute()
     df = pd.DataFrame(result.data)
     if df.empty:
         return None
@@ -302,7 +300,7 @@ def get_shap_background(city, _le, feature_cols):
         if col == "city_encoded":
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
-    df = df.reindex(columns=feature_cols).dropna(subset=feature_cols)
+    df = df.reindex(columns=feature_cols, fill_value=0)
     return df if not df.empty else None
 
 def compute_shap_importance(model, model_type, X_background):
@@ -340,7 +338,7 @@ if model is None:
 # Load SHAP background data (cached)
 background_df = get_shap_background("lahore", le, model_feature_cols)
 shap_explainer = None
-if background_df is not None and len(background_df) >= 10:
+if background_df is not None and len(background_df) >= 5:   # reduced threshold
     shap_explainer = load_shap_explainer(model, background_df)
 
 # Sidebar
@@ -558,7 +556,6 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 if shap_explainer is not None and X is not None:
     try:
         shap_values = shap_explainer.shap_values(X)
-        # If shap_values is a list (multi-output), take first output (24h forecast)
         if isinstance(shap_values, list):
             shap_values = shap_values[0]
         shap_vals = shap_values.flatten() if len(shap_values.shape) > 1 else shap_values
@@ -596,7 +593,7 @@ if shap_explainer is not None and X is not None:
     except Exception as e:
         st.warning(f"Could not compute SHAP explanation: {e}")
 else:
-    st.info("Not enough background data to compute SHAP explanations (need at least 10 rows with lag features).")
+    st.info("Not enough background data to compute SHAP explanations (need at least 5 rows with lag features).")
 
 spacer()
 
@@ -607,7 +604,6 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
     import numpy as np
-    # Use the first estimator if multi-output
     if isinstance(model, MultiOutputRegressor):
         base_estimator = model.estimators_[0]
     else:
