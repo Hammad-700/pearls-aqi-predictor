@@ -14,7 +14,7 @@ BACKUP_STATIONS = [
 ]
 
 ALL_STATIONS = [PRIMARY_STATION] + BACKUP_STATIONS
-MAX_AGE_HOURS = 6
+MAX_AGE_HOURS = 3
 
 
 def station_matches_lahore_pakistan(data: dict) -> bool:
