@@ -288,10 +288,10 @@ def get_history(city):
 @st.cache_data(ttl=300)
 def get_shap_background(city, _le, feature_cols):
     sb = get_supabase()
-    # Fetch latest 100 rows – no filter on lags
+    # Fetch latest 200 rows – no filter on lags
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
-        .order("timestamp", desc=True).limit(100).execute()
+        .order("timestamp", desc=True).limit(200).execute()
     df = pd.DataFrame(result.data)
     if df.empty:
         return None
@@ -301,7 +301,7 @@ def get_shap_background(city, _le, feature_cols):
             continue
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(float)
     df = df.reindex(columns=feature_cols, fill_value=0)
-    return df if not df.empty else None
+    return df   # even if only 1 row, we'll try
 
 def compute_shap_importance(model, model_type, X_background):
     import shap
@@ -338,7 +338,7 @@ if model is None:
 # Load SHAP background data (cached)
 background_df = get_shap_background("lahore", le, model_feature_cols)
 shap_explainer = None
-if background_df is not None and len(background_df) >= 5:   # reduced threshold
+if background_df is not None and len(background_df) >= 1:
     shap_explainer = load_shap_explainer(model, background_df)
 
 # Sidebar
@@ -593,7 +593,7 @@ if shap_explainer is not None and X is not None:
     except Exception as e:
         st.warning(f"Could not compute SHAP explanation: {e}")
 else:
-    st.info("Not enough background data to compute SHAP explanations (need at least 5 rows with lag features).")
+    st.info("Not enough background data to compute SHAP explanations (need at least 1 row).")
 
 spacer()
 
