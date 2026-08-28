@@ -164,9 +164,10 @@ def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
         raise RuntimeError("clean_to_silver() returned no row")
     silver = dict(silver)
 
+    # ★ Always update weather from bronze (overwrite)
     weather = extract_weather(bronze)
     for key, value in weather.items():
-        if silver.get(key) is None and value is not None:
+        if value is not None:
             silver[key] = value
 
     station = extract_station(bronze, silver)
@@ -177,12 +178,11 @@ def save_silver(bronze: Dict[str, Any]) -> Dict[str, Any]:
     silver["city"] = bronze["city"]
     silver["timestamp"] = normalize_and_round_timestamp(bronze["timestamp"])
 
-    # Default station_id to avoid NULL in conflict key (optional)
+    # Default station_id to avoid NULL in conflict key
     if silver.get("station_id") is None:
         silver["station_id"] = "lahore_avg"
         silver["station_name"] = "Lahore (averaged)"
 
-    # ★ FIX: use only (city, timestamp) for conflict
     supabase.table("aqi_silver_cleaned").upsert(
         silver, on_conflict="city,timestamp"
     ).execute()
