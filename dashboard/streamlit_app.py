@@ -469,8 +469,6 @@ if history:
     ))
 
 # ---------- Forecast line (starts only on future dates) ----------
-as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
-
 forecast_x = []
 forecast_y = []
 for f in forecast:
@@ -478,17 +476,17 @@ for f in forecast:
     forecast_x.append(f_date)
     forecast_y.append(f["aqi"])
 
-fig.add_trace(go.Scatter(
-    x=forecast_x,
-    y=forecast_y,
-    name="Forecast AQI",
-    line=dict(color="#ff4b4b", dash="dash", width=2),
-    mode="lines+markers",
-    marker=dict(size=9)
-))
-
-# Optional vertical line at forecast start
 if forecast_x:
+    fig.add_trace(go.Scatter(
+        x=forecast_x,
+        y=forecast_y,
+        name="Forecast AQI",
+        line=dict(color="#ff4b4b", dash="dash", width=2),
+        mode="lines+markers",
+        marker=dict(size=9)
+    ))
+
+    # Optional vertical line to separate history and forecast
     fig.add_vline(x=forecast_x[0], line_dash="dash", line_color="gray", opacity=0.5)
 
 # Reference lines
@@ -552,8 +550,6 @@ importance_data = {
     "Importance": importances
 }
 
-import pandas as pd
-import plotly.graph_objects as go
 imp_df = pd.DataFrame(importance_data).sort_values("Importance", ascending=True)
 fig2 = go.Figure(go.Bar(
     x=imp_df["Importance"], y=imp_df["Feature"],
@@ -579,6 +575,5 @@ st.markdown("""
 
 spacer()
 
-# Footer
 st.markdown("---")
 st.caption("Pearls AQI Predictor | Data: AQICN API | Models: Ridge, Random Forest, XGBoost, LightGBM")
