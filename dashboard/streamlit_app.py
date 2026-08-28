@@ -190,7 +190,6 @@ def load_model():
         st.error(f"Model load error: {e}")
         return None, None, None, None, None
 
-@st.cache_resource(ttl=3600)
 def load_shap_explainer(model, X_background):
     """Return a SHAP explainer for the given model and background data."""
     try:
@@ -271,7 +270,6 @@ def predict(city, model, le, feature_cols=None):
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
             "aqi": int(round(aqi_val))
         })
-    # Return also the feature vector for SHAP
     return forecast, row["timestamp"], row, X
 
 def get_history(city):
@@ -500,7 +498,7 @@ if history:
         connectgaps=False
     ))
 
-# ---------- Forecast line (connects from last historical point) ----------
+# ---------- Forecast line ----------
 as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
 if history:
@@ -546,28 +544,23 @@ st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 spacer()
 
-# ========== NEW: SHAP EXPLANATIONS ==========
+# ========== SHAP EXPLANATIONS ==========
 st.markdown("---")
 st.subheader("Why this prediction?")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 if shap_explainer is not None and X is not None:
     try:
-        # Compute SHAP values for the current instance
         shap_values = shap_explainer.shap_values(X)
-        # If shap_values is a list (multi-output), take first output (24h forecast)
         if isinstance(shap_values, list):
             shap_values = shap_values[0]
-        # shap_values shape: (1, n_features) -> flatten
         shap_vals = shap_values.flatten() if len(shap_values.shape) > 1 else shap_values
-        # Create DataFrame
         feature_names = model_feature_cols if model_feature_cols else X.columns.tolist()
         shap_df = pd.DataFrame({
             'Feature': feature_names,
             'Contribution': shap_vals
         }).sort_values('Contribution', ascending=False)
 
-        # Top increases and decreases
         top_inc = shap_df[shap_df['Contribution'] > 0].head(3)
         top_dec = shap_df[shap_df['Contribution'] < 0].tail(3)
 
@@ -576,7 +569,6 @@ if shap_explainer is not None and X is not None:
         if not top_dec.empty:
             st.markdown(f"**Top decrease:** {top_dec.iloc[0]['Feature']} ({top_dec.iloc[0]['Contribution']:.2f})")
 
-        # Plot horizontal bar chart (positive = red, negative = blue)
         colors = ['#ff4b4b' if c > 0 else '#1f77b4' for c in shap_df['Contribution']]
         fig_shap = go.Figure(go.Bar(
             x=shap_df['Contribution'],
@@ -594,7 +586,6 @@ if shap_explainer is not None and X is not None:
             plot_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
-
     except Exception as e:
         st.warning(f"Could not compute SHAP explanation: {e}")
 else:
@@ -602,7 +593,7 @@ else:
 
 spacer()
 
-# Section: Feature Importance (existing)
+# Section: Global Feature Importance
 st.markdown("---")
 st.subheader("Global Feature Importance (model-wide)")
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
