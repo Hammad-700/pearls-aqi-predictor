@@ -332,8 +332,6 @@ if model is None:
     st.error("Model not loaded!")
     st.stop()
 
-# Debug: show model type (remove later)
-st.write("Model type:", type(model))
 
 # Load background (for SHAP)
 background_df = get_shap_background("lahore", le, model_feature_cols)
