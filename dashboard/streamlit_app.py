@@ -610,7 +610,7 @@ spacer()
 
 # Section: Global Feature Importance (model-wide)
 st.markdown("---")
-st.markdown("<h2>Global Feature Importance (model-wide)</h2>", unsafe_allow_html=True)   # <-- changed to h2
+st.markdown("<h2>Global Feature Importance</h2>", unsafe_allow_html=True)   # <-- changed to h2
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
