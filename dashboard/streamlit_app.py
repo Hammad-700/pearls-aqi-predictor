@@ -293,8 +293,16 @@ def get_history(city):
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
         .gte("timestamp", ten_days_ago)\
-        .order("timestamp", desc=True).limit(500).execute()
-    return result.data
+        .order("timestamp", desc=False).limit(500).execute()
+    
+    if not result.data:
+        return []
+    
+    df = pd.DataFrame(result.data)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.set_index("timestamp").resample("3H").mean().reset_index()
+    df["aqi"] = df["aqi"].round(0)
+    return df.to_dict("records")
 
 @st.cache_data(ttl=300)
 def get_shap_background(city, _le, feature_cols):
@@ -497,7 +505,7 @@ if history:
         x=x_vals, y=y_vals,
         name="Historical AQI",
         line=dict(color="#1f77b4", width=2),
-        connectgaps=False
+        connectgaps=True
     ))
 
 # ---------- Forecast line ----------
