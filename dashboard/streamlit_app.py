@@ -299,7 +299,7 @@ def get_history(city):
         return []
     
     df = pd.DataFrame(result.data)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     df = df.set_index("timestamp").resample("3H").mean().reset_index()
     df["aqi"] = df["aqi"].round(0)
     return df.to_dict("records")
