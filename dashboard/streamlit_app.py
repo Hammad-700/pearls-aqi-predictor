@@ -530,7 +530,7 @@ fig.add_trace(go.Scatter(
     x=forecast_x,
     y=forecast_y,
     name="Forecast AQI",
-    line=dict(color="#eb0a0a", dash="solid", width=3),
+    line=dict(color="#db3838", dash="solid", width=3),
     mode="lines+markers",
     marker=dict(size=9)
 ))
