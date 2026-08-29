@@ -301,7 +301,7 @@ def get_history(city):
     df = pd.DataFrame(result.data)
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", utc=True)
     df = df.set_index("timestamp").resample("3h").mean().reset_index()
-    df["aqi"] = df["aqi"].round(0)
+    df["aqi"] = df["aqi"].rolling(window=3, min_periods=1, center=True).mean().round(0)
     return df.to_dict("records")
 
 @st.cache_data(ttl=300)
