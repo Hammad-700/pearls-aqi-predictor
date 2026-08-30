@@ -294,11 +294,9 @@ def predict(city, model, le, feature_cols=None):
 
     # ---- Handle single‑output models ----
     if not hasattr(preds, '__len__') or len(preds) == 1:
-        # If only one value, repeat it for 3 days (persistence forecast)
         st.warning("⚠️ Model provides only a 1‑day forecast. We will extend it with the same value for days 2 and 3.")
         preds = [preds] * 3 if not hasattr(preds, '__len__') else [preds[0]] * 3
     else:
-        # Ensure we have exactly 3 values (take first 3, or pad with last value)
         preds = list(preds[:3])
         while len(preds) < 3:
             preds.append(preds[-1])
@@ -315,25 +313,50 @@ def predict(city, model, le, feature_cols=None):
     return forecast, row["timestamp"], row, X
 
 # ------------------------------------------------------------------------------
-# History (cached)
+# History — resampled to 3h, but last point forced to latest raw AQI
 # ------------------------------------------------------------------------------
-@st.cache_data(ttl=300)
 def get_history(city):
     sb = get_supabase()
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
+    
+    # Fetch raw data
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
         .gte("timestamp", ten_days_ago)\
         .order("timestamp", desc=False).limit(500).execute()
     if not result.data:
         return []
+    
     df = pd.DataFrame(result.data)
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", utc=True)
-    df = df.set_index("timestamp").resample("3h").mean().reset_index()
-    df["aqi"] = df["aqi"].rolling(window=3, min_periods=1, center=True).mean().round(0)
-    # Drop any remaining NaNs
-    df = df.dropna(subset=["aqi"])
-    return df.to_dict("records")
+    
+    # Resample to 3‑hourly mean for smoother line
+    df = df.set_index("timestamp")
+    df_resampled = df.resample("3h").mean().reset_index()
+    df_resampled["timestamp"] = df_resampled["timestamp"].dt.tz_localize("UTC").dt.tz_convert("Asia/Karachi")
+    df_resampled["aqi"] = df_resampled["aqi"].round(0)
+    
+    # Get the absolute latest raw row to ensure the endpoint is correct
+    latest_raw = sb.table("aqi_gold_features")\
+        .select("timestamp,aqi").eq("city", city)\
+        .order("timestamp", desc=True).limit(1).execute()
+    if latest_raw.data:
+        latest_ts = pd.to_datetime(latest_raw.data[0]["timestamp"], utc=True).tz_convert("Asia/Karachi")
+        latest_aqi = latest_raw.data[0]["aqi"]
+        
+        if not df_resampled.empty:
+            # If the latest raw point is newer than the last resampled point, append it.
+            # Otherwise, replace the last resampled point.
+            if latest_ts > df_resampled["timestamp"].iloc[-1]:
+                new_row = pd.DataFrame({"timestamp": [latest_ts], "aqi": [latest_aqi]})
+                df_resampled = pd.concat([df_resampled, new_row], ignore_index=True)
+            else:
+                # Replace the last point with the raw value (ensures match)
+                df_resampled.iloc[-1, df_resampled.columns.get_loc("timestamp")] = latest_ts
+                df_resampled.iloc[-1, df_resampled.columns.get_loc("aqi")] = latest_aqi
+    
+    df_resampled = df_resampled.dropna(subset=["aqi"])
+    return df_resampled.to_dict("records")
 
 # ------------------------------------------------------------------------------
 # SHAP background (cached)
@@ -515,25 +538,17 @@ st.markdown("---")
 st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# Debug expander (only visible to you)
-# with st.expander("🔍 Debug info (forecast data)"):
-#     # st.write("Forecast list:", forecast)
-#     st.write("Number of forecast points:", len(forecast))
-#     st.write("History rows:", len(history) if history else 0)
-
 try:
     with st.spinner("Loading historical data..."):
         history = get_history(city)
 
     fig = go.Figure()
 
-    # ---------- Historical line (simplified) ----------
+    # ---------- Historical line (smoothed, but tail forced to raw) ----------
     if history:
         hist_df = pd.DataFrame(history)
-        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
-        hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
+        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
         hist_df = hist_df.sort_values("timestamp")
-        # Drop any rows with NaN aqi (should already be cleaned, but just in case)
         hist_df_clean = hist_df.dropna(subset=['aqi'])
 
         if not hist_df_clean.empty:
@@ -548,7 +563,7 @@ try:
     # ---------- Forecast line ----------
     as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
-    # Determine last historical point
+    # Determine last historical point (now it's the forced raw endpoint)
     if history and 'hist_df_clean' in locals() and not hist_df_clean.empty:
         last_hist_ts = hist_df_clean["timestamp"].iloc[-1]
         last_hist_aqi = hist_df_clean["aqi"].iloc[-1]
