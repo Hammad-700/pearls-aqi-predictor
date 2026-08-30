@@ -516,10 +516,10 @@ st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 # Debug expander (only visible to you)
-with st.expander("🔍 Debug info (forecast data)"):
-    st.write("Forecast list:", forecast)
-    st.write("Number of forecast points:", len(forecast))
-    st.write("History rows:", len(history) if history else 0)
+# with st.expander("🔍 Debug info (forecast data)"):
+#     # st.write("Forecast list:", forecast)
+#     st.write("Number of forecast points:", len(forecast))
+#     st.write("History rows:", len(history) if history else 0)
 
 try:
     with st.spinner("Loading historical data..."):
