@@ -527,26 +527,19 @@ try:
 
     fig = go.Figure()
 
-    # ---------- Historical line ----------
+    # ---------- Historical line (simplified) ----------
     if history:
         hist_df = pd.DataFrame(history)
         hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
         hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
         hist_df = hist_df.sort_values("timestamp")
         # Drop any rows with NaN aqi (should already be cleaned, but just in case)
-        hist_df_clean = hist_df.dropna(subset=['aqi']).copy()
+        hist_df_clean = hist_df.dropna(subset=['aqi'])
 
         if not hist_df_clean.empty:
-            hist_df_clean["gap"] = hist_df_clean["timestamp"].diff() > pd.Timedelta(hours=3)
-            x_vals, y_vals = [], []
-            for i, row in hist_df_clean.iterrows():
-                if row["gap"] and x_vals:
-                    x_vals.append(None)
-                    y_vals.append(None)
-                x_vals.append(row["timestamp"])
-                y_vals.append(row["aqi"])
             fig.add_trace(go.Scatter(
-                x=x_vals, y=y_vals,
+                x=hist_df_clean["timestamp"],
+                y=hist_df_clean["aqi"],
                 name="Historical AQI",
                 line=dict(color="#1f77b4", width=2),
                 connectgaps=True
