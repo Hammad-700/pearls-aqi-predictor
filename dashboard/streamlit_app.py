@@ -315,9 +315,8 @@ def predict(city, model, le, feature_cols=None):
     return forecast, row["timestamp"], row, X
 
 # ------------------------------------------------------------------------------
-# History (cached)
+# History (cache removed so it always fetches fresh data)
 # ------------------------------------------------------------------------------
-@st.cache_data(ttl=300)
 def get_history(city):
     sb = get_supabase()
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
