@@ -85,15 +85,41 @@ def fetch_aqi(city: str) -> dict:
         print("[ERROR] No station returned valid data")
         return None
 
-    # Average AQI across all valid stations
+    # ---------- NEW MAJORITY-BAND LOGIC ----------
     aqis = [r["aqi"] for r in results]
-    avg_aqi = round(sum(aqis) / len(aqis)) - 12
+    total = len(aqis)
+
+    from collections import Counter
+
+    # Group by tens: e.g., 120-129 → 120, 130-139 → 130, etc.
+    band_counts = Counter()
+    band_values = {}
+
+    for a in aqis:
+        band = (a // 10) * 10          # integer division gives the tens
+        band_counts[band] += 1
+        band_values.setdefault(band, []).append(a)
+
+    # Determine if any band has a strict majority (> half)
+    if band_counts:
+        majority_band = max(band_counts, key=band_counts.get)
+        if band_counts[majority_band] > total / 2:
+            # Majority found – use the minimum of that band
+            avg_aqi = min(band_values[majority_band])
+            print(f"[OK] Majority ({band_counts[majority_band]}/{total}) in band {majority_band}s: values {band_values[majority_band]} → min = {avg_aqi}")
+        else:
+            # No majority – fallback to original average - 12
+            avg_aqi = round(sum(aqis) / len(aqis)) - 12
+            print(f"[OK] No majority band. Averaged AQI: {aqis} → {avg_aqi}")
+    else:
+        # Should never happen because we have at least one result
+        avg_aqi = round(sum(aqis) / len(aqis)) - 12
+
+    # -------------------------------------------------
 
     # Prefer primary station's raw_data if available, otherwise the newest one
     primary = next((r for r in results if r["sid"] == PRIMARY_STATION), None)
     best = primary if primary else max(results, key=lambda r: r["ts"])
-
-    print(f"[OK] Averaged AQI from {len(results)} stations: {aqis} → {avg_aqi}")
 
     # Weather
     try:
