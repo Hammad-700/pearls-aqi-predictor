@@ -618,7 +618,8 @@ st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 # Short explanation for SHAP
 st.markdown("""
-**🔴 Red = pushes AQI up · 🔵 Blue = pushes AQI down.**  
+**🔴 Red = pushes AQI up**  
+**🔵 Blue = pushes AQI down**    
 Values are in AQI points. The sum of these contributions + average prediction = final forecast.
 """, unsafe_allow_html=True)
 
