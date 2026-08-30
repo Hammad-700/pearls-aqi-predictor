@@ -4,6 +4,7 @@ import math
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional
 
+import pandas as pd
 from dotenv import load_dotenv
 from supabase import create_client
 
@@ -279,6 +280,109 @@ def save_gold(silver: Dict[str, Any], history: list) -> Dict[str, Any]:
     return payload
 
 
+# ---------- Enhanced fill_past_targets with debugging ----------
+def fill_past_targets(city: str):
+    """Fill aqi_d1/d2/d3 for Gold rows older than 72h that still have NULL targets."""
+    print(f"\n[INFO] Filling past targets for {city}...")
+    
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
+    print(f"[DEBUG] Cutoff timestamp: {cutoff}")
+
+    # 1. Check how many NULL rows exist (older than 72h)
+    count_result = supabase.table("aqi_gold_features")\
+        .select("id", count="exact")\
+        .eq("city", city)\
+        .is_("aqi_d1", "null")\
+        .lt("timestamp", cutoff)\
+        .execute()
+    
+    total_null_count = count_result.count
+    print(f"[DEBUG] Total Gold rows with NULL targets older than 72h: {total_null_count}")
+
+    if total_null_count == 0:
+        print("[WARN] No NULL targets found to fill. Either data is too fresh, or already filled.")
+        return
+
+    # 2. Fetch the actual rows (first 200)
+    gold_null = supabase.table("aqi_gold_features")\
+        .select("id,city,timestamp,aqi")\
+        .eq("city", city)\
+        .is_("aqi_d1", "null")\
+        .lt("timestamp", cutoff)\
+        .order("timestamp", desc=False)\
+        .limit(200)\
+        .execute()
+
+    print(f"[DEBUG] Processing {len(gold_null.data)} rows (out of {total_null_count})")
+
+    # 3. Load Silver data
+    silver = supabase.table("aqi_silver_cleaned")\
+        .select("timestamp,aqi")\
+        .eq("city", city)\
+        .order("timestamp", desc=False)\
+        .execute()
+
+    if not silver.data:
+        print("[ERROR] No Silver data found in DB!")
+        return
+
+    silver_df = pd.DataFrame(silver.data)
+    silver_df["timestamp"] = pd.to_datetime(silver_df["timestamp"], utc=True)
+    silver_df = silver_df.set_index("timestamp")
+    print(f"[DEBUG] Loaded {len(silver_df)} Silver rows. Date range: {silver_df.index.min()} to {silver_df.index.max()}")
+
+    filled = 0
+    skipped = 0
+
+    for idx, row in enumerate(gold_null.data):
+        ts = pd.to_datetime(row["timestamp"], utc=True)
+        print(f"\n[ROW {idx+1}] Base timestamp: {ts}")
+
+        # Define target times
+        target_d1 = ts + pd.Timedelta(hours=24)
+        target_d2 = ts + pd.Timedelta(hours=48)
+        target_d3 = ts + pd.Timedelta(hours=72)
+        print(f"  Looking for D1: {target_d1}, D2: {target_d2}, D3: {target_d3}")
+
+        def find_aqi_at(target_ts, window_hours=3):
+            # Use a wider window (3 hours) just in case of timezone rounding issues
+            start = target_ts - pd.Timedelta(hours=window_hours)
+            end = target_ts + pd.Timedelta(hours=window_hours)
+            
+            # Check if we even have data in this range
+            mask = (silver_df.index >= start) & (silver_df.index <= end)
+            subset = silver_df[mask]
+            
+            if subset.empty:
+                # Check nearby exact hour without window
+                exact_mask = (silver_df.index == target_ts)
+                exact_subset = silver_df[exact_mask]
+                if not exact_subset.empty:
+                    return float(exact_subset["aqi"].mean())
+                return None
+            
+            return float(subset["aqi"].mean())
+
+        d1 = find_aqi_at(target_d1)
+        d2 = find_aqi_at(target_d2)
+        d3 = find_aqi_at(target_d3)
+
+        print(f"  Found D1: {d1}, D2: {d2}, D3: {d3}")
+
+        if d1 is not None and d2 is not None and d3 is not None:
+            # Update the row
+            supabase.table("aqi_gold_features").update({
+                "aqi_d1": d1, "aqi_d2": d2, "aqi_d3": d3
+            }).eq("id", row["id"]).execute()
+            filled += 1
+            print(f"  ✅ UPDATED row {row['id']}")
+        else:
+            skipped += 1
+            print(f"  ❌ SKIPPED row {row['id']} (missing future AQI data)")
+
+    print(f"\n[OK] Filled targets for {filled} rows. Skipped {skipped} rows due to missing Silver data.")
+
+
 # ---------- Pipeline runner ----------
 def run_pipeline(city: str) -> None:
     city = city.strip().lower()
@@ -309,4 +413,6 @@ def run_pipeline(city: str) -> None:
 
 
 if __name__ == "__main__":
-    run_pipeline(sys.argv[1] if len(sys.argv) > 1 else "lahore")
+    city = sys.argv[1] if len(sys.argv) > 1 else "lahore"
+    run_pipeline(city)
+    fill_past_targets(city)   # Retroactively fill targets for older rows
