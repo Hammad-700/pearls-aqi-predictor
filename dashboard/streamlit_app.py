@@ -294,11 +294,9 @@ def predict(city, model, le, feature_cols=None):
 
     # ---- Handle single‑output models ----
     if not hasattr(preds, '__len__') or len(preds) == 1:
-        # If only one value, repeat it for 3 days (persistence forecast)
         st.warning("⚠️ Model provides only a 1‑day forecast. We will extend it with the same value for days 2 and 3.")
         preds = [preds] * 3 if not hasattr(preds, '__len__') else [preds[0]] * 3
     else:
-        # Ensure we have exactly 3 values (take first 3, or pad with last value)
         preds = list(preds[:3])
         while len(preds) < 3:
             preds.append(preds[-1])
@@ -315,10 +313,11 @@ def predict(city, model, le, feature_cols=None):
     return forecast, row["timestamp"], row, X
 
 # ------------------------------------------------------------------------------
-# History (cache removed so it always fetches fresh data)
+# History — returns RAW data (no resampling) for perfect alignment
 # ------------------------------------------------------------------------------
 def get_history(city):
     sb = get_supabase()
+    # Get the last 200 rows (or last 10 days, whichever is fewer)
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
@@ -327,10 +326,11 @@ def get_history(city):
     if not result.data:
         return []
     df = pd.DataFrame(result.data)
+    # Convert to datetime and localize to PKT for display
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", utc=True)
-    df = df.set_index("timestamp").resample("3h").mean().reset_index()
-    df["aqi"] = df["aqi"].rolling(window=3, min_periods=1, center=True).mean().round(0)
-    # Drop any remaining NaNs
+    df["timestamp"] = df["timestamp"].dt.tz_convert("Asia/Karachi")
+    # No resampling — keep raw values
+    # Drop any rows with NaN just in case
     df = df.dropna(subset=["aqi"])
     return df.to_dict("records")
 
@@ -514,25 +514,19 @@ st.markdown("---")
 st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# Debug expander (only visible to you)
-# with st.expander("🔍 Debug info (forecast data)"):
-#     # st.write("Forecast list:", forecast)
-#     st.write("Number of forecast points:", len(forecast))
-#     st.write("History rows:", len(history) if history else 0)
-
 try:
     with st.spinner("Loading historical data..."):
         history = get_history(city)
 
     fig = go.Figure()
 
-    # ---------- Historical line (simplified) ----------
+    # ---------- Historical line (raw data, no resampling) ----------
     if history:
         hist_df = pd.DataFrame(history)
-        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
-        hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
+        # Already in PKT, but ensure it's datetime
+        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
         hist_df = hist_df.sort_values("timestamp")
-        # Drop any rows with NaN aqi (should already be cleaned, but just in case)
+        # Drop NaNs
         hist_df_clean = hist_df.dropna(subset=['aqi'])
 
         if not hist_df_clean.empty:
@@ -547,7 +541,7 @@ try:
     # ---------- Forecast line ----------
     as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
-    # Determine last historical point
+    # Determine last historical point (use the last raw point)
     if history and 'hist_df_clean' in locals() and not hist_df_clean.empty:
         last_hist_ts = hist_df_clean["timestamp"].iloc[-1]
         last_hist_aqi = hist_df_clean["aqi"].iloc[-1]
