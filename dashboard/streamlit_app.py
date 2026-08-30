@@ -313,26 +313,50 @@ def predict(city, model, le, feature_cols=None):
     return forecast, row["timestamp"], row, X
 
 # ------------------------------------------------------------------------------
-# History — returns RAW data (no resampling) for perfect alignment
+# History — resampled to 3h, but last point forced to latest raw AQI
 # ------------------------------------------------------------------------------
 def get_history(city):
     sb = get_supabase()
-    # Get the last 200 rows (or last 10 days, whichever is fewer)
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
+    
+    # Fetch raw data
     result = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
         .gte("timestamp", ten_days_ago)\
         .order("timestamp", desc=False).limit(500).execute()
     if not result.data:
         return []
+    
     df = pd.DataFrame(result.data)
-    # Convert to datetime and localize to PKT for display
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", utc=True)
-    df["timestamp"] = df["timestamp"].dt.tz_convert("Asia/Karachi")
-    # No resampling — keep raw values
-    # Drop any rows with NaN just in case
-    df = df.dropna(subset=["aqi"])
-    return df.to_dict("records")
+    
+    # Resample to 3‑hourly mean for smoother line
+    df = df.set_index("timestamp")
+    df_resampled = df.resample("3h").mean().reset_index()
+    df_resampled["timestamp"] = df_resampled["timestamp"].dt.tz_localize("UTC").dt.tz_convert("Asia/Karachi")
+    df_resampled["aqi"] = df_resampled["aqi"].round(0)
+    
+    # Get the absolute latest raw row to ensure the endpoint is correct
+    latest_raw = sb.table("aqi_gold_features")\
+        .select("timestamp,aqi").eq("city", city)\
+        .order("timestamp", desc=True).limit(1).execute()
+    if latest_raw.data:
+        latest_ts = pd.to_datetime(latest_raw.data[0]["timestamp"], utc=True).tz_convert("Asia/Karachi")
+        latest_aqi = latest_raw.data[0]["aqi"]
+        
+        if not df_resampled.empty:
+            # If the latest raw point is newer than the last resampled point, append it.
+            # Otherwise, replace the last resampled point.
+            if latest_ts > df_resampled["timestamp"].iloc[-1]:
+                new_row = pd.DataFrame({"timestamp": [latest_ts], "aqi": [latest_aqi]})
+                df_resampled = pd.concat([df_resampled, new_row], ignore_index=True)
+            else:
+                # Replace the last point with the raw value (ensures match)
+                df_resampled.iloc[-1, df_resampled.columns.get_loc("timestamp")] = latest_ts
+                df_resampled.iloc[-1, df_resampled.columns.get_loc("aqi")] = latest_aqi
+    
+    df_resampled = df_resampled.dropna(subset=["aqi"])
+    return df_resampled.to_dict("records")
 
 # ------------------------------------------------------------------------------
 # SHAP background (cached)
@@ -520,13 +544,11 @@ try:
 
     fig = go.Figure()
 
-    # ---------- Historical line (raw data, no resampling) ----------
+    # ---------- Historical line (smoothed, but tail forced to raw) ----------
     if history:
         hist_df = pd.DataFrame(history)
-        # Already in PKT, but ensure it's datetime
         hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"])
         hist_df = hist_df.sort_values("timestamp")
-        # Drop NaNs
         hist_df_clean = hist_df.dropna(subset=['aqi'])
 
         if not hist_df_clean.empty:
@@ -541,7 +563,7 @@ try:
     # ---------- Forecast line ----------
     as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
 
-    # Determine last historical point (use the last raw point)
+    # Determine last historical point (now it's the forced raw endpoint)
     if history and 'hist_df_clean' in locals() and not hist_df_clean.empty:
         last_hist_ts = hist_df_clean["timestamp"].iloc[-1]
         last_hist_aqi = hist_df_clean["aqi"].iloc[-1]
