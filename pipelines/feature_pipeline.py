@@ -327,7 +327,8 @@ def fill_past_targets(city: str):
         return
 
     silver_df = pd.DataFrame(silver.data)
-    silver_df["timestamp"] = pd.to_datetime(silver_df["timestamp"], utc=True)
+    # FIX: Use format='ISO8601' to handle fractional seconds and timezone offsets
+    silver_df["timestamp"] = pd.to_datetime(silver_df["timestamp"], utc=True, format='ISO8601')
     silver_df = silver_df.set_index("timestamp")
     print(f"[DEBUG] Loaded {len(silver_df)} Silver rows. Date range: {silver_df.index.min()} to {silver_df.index.max()}")
 
@@ -335,7 +336,8 @@ def fill_past_targets(city: str):
     skipped = 0
 
     for idx, row in enumerate(gold_null.data):
-        ts = pd.to_datetime(row["timestamp"], utc=True)
+        # FIX: Use format='ISO8601' for this conversion as well
+        ts = pd.to_datetime(row["timestamp"], utc=True, format='ISO8601')
         print(f"\n[ROW {idx+1}] Base timestamp: {ts}")
 
         # Define target times
