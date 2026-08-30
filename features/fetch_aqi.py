@@ -113,7 +113,7 @@ def fetch_aqi(city: str) -> dict:
             print(f"[OK] No majority band. Averaged AQI: {aqis} → {avg_aqi}")
     else:
         # Should never happen because we have at least one result
-        avg_aqi = round(sum(aqis) / len(aqis)) - 7
+        avg_aqi = round(sum(aqis) / len(aqis)) - 3
 
     # -------------------------------------------------
 
