@@ -610,36 +610,18 @@ except Exception as e:
 spacer()
 
 # ------------------------------------------------------------------------------
-# SHAP Explanations (with added explanatory text)
+# SHAP Explanations (short version)
 # ------------------------------------------------------------------------------
 st.markdown("---")
 st.markdown("<h2>Why this prediction?</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# --- Added explanatory text for SHAP ---
+# Short explanation for SHAP
 st.markdown("""
-### 🧠 SHAP Feature Contributions — Why This Prediction?
-
-This chart shows **why the model predicted today’s AQI**.
-
-Each bar shows how much a feature changed the prediction:
-
-* 🔴 **Red bars** → Push the AQI higher.
-* 🔵 **Blue bars** → Push the AQI lower.
-
-The values are measured in **AQI points**.
-
-For example:
-
-* **aqi_roll_mean_24h (+2.35)** → increased the AQI by 2.35 points.
-* **aqi_lag_24h (-5.79)** → decreased the AQI by 5.79 points.
-
-All these effects are combined with the model’s average prediction to get the **final AQI forecast**.
-
-**In simple terms:** This chart helps explain why the model predicts an AQI of, for example, **103**.
+**🔴 Red = pushes AQI up · 🔵 Blue = pushes AQI down.**  
+Values are in AQI points. The sum of these contributions + average prediction = final forecast.
 """, unsafe_allow_html=True)
 
-# --- existing dynamic summary and chart ---
 try:
     if shap_explainer is None and X is not None:
         shap_explainer = load_shap_explainer(model, X)
@@ -689,32 +671,18 @@ except Exception as e:
 spacer()
 
 # ------------------------------------------------------------------------------
-# Global Feature Importance (with added explanatory text)
+# Global Feature Importance (short version)
 # ------------------------------------------------------------------------------
 st.markdown("---")
 st.markdown("<h2>Global Feature Importance</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# --- Added explanatory text for Global Importance ---
+# Short explanation for Global Importance
 st.markdown("""
-### 📊 Global Feature Importance — What Does the Model Care About?
-
-This chart shows **which features are most important to the model overall**.
-
-It looks at many predictions, not just today’s forecast.
-
-* **Longer bars** → More important features.
-* **Shorter bars** → Less important features.
-
-For example:
-
-* **NO2 Raw (~6.5%)** is one of the important features.
-* **Humidity (~6%)** is also an important feature.
-
-**In simple terms:** This chart shows which factors the model uses the most when making AQI predictions. It can also help us understand and check how the model works.
+**Longer bars = more important features overall.**  
+This shows which factors the model relies on most across all predictions.
 """, unsafe_allow_html=True)
 
-# --- existing chart ---
 try:
     if isinstance(model, MultiOutputRegressor):
         base_estimator = model.estimators_[0]
