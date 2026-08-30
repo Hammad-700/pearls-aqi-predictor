@@ -16,6 +16,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto",
 )
+
+# ------------------------------------------------------------------------------
+# Custom CSS (unchanged)
+# ------------------------------------------------------------------------------
 st.markdown("""
 <style>
 .block-container {
@@ -154,11 +158,16 @@ h1 + div p {
 </style>
 """, unsafe_allow_html=True)
 
-
+# ------------------------------------------------------------------------------
+# Cached Supabase client
+# ------------------------------------------------------------------------------
 @st.cache_resource(ttl=300)
 def get_supabase():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
+# ------------------------------------------------------------------------------
+# Model loader (cached)
+# ------------------------------------------------------------------------------
 @st.cache_resource(ttl=300)
 def load_model():
     sb = get_supabase()
@@ -191,10 +200,11 @@ def load_model():
         st.error(f"Model load error: {e}")
         return None, None, None, None, None
 
+# ------------------------------------------------------------------------------
+# SHAP explainer loader (with fallback)
+# ------------------------------------------------------------------------------
 def load_shap_explainer(model, X_background):
-    """Return a SHAP explainer with automatic fallback to KernelExplainer."""
     try:
-        # 1. Try to get the underlying model if it's a wrapper
         if isinstance(model, MultiOutputRegressor):
             base_model = model.estimators_[0]
         elif hasattr(model, 'estimators_'):
@@ -202,24 +212,23 @@ def load_shap_explainer(model, X_background):
         else:
             base_model = model
 
-        # 2. Try TreeExplainer for tree-based models
         if hasattr(base_model, 'feature_importances_') or hasattr(base_model, 'get_booster'):
             return shap.TreeExplainer(base_model)
-        # 3. Try LinearExplainer for linear models
         elif hasattr(base_model, 'coef_'):
             return shap.LinearExplainer(base_model, X_background)
-        # 4. Fallback to KernelExplainer (works for any model)
         else:
             return shap.KernelExplainer(model.predict, X_background)
     except Exception as e:
         st.warning(f"SHAP Tree/LinearExplainer failed: {e}. Trying KernelExplainer...")
         try:
-            # Last resort: KernelExplainer with the model's predict method
             return shap.KernelExplainer(model.predict, X_background)
         except Exception as e2:
             st.error(f"KernelExplainer also failed: {e2}")
             return None
 
+# ------------------------------------------------------------------------------
+# Helper: alert label and color
+# ------------------------------------------------------------------------------
 def get_alert(aqi):
     if aqi <= 50: return "Good", "#00c853"
     elif aqi <= 100: return "Moderate", "#ffd600"
@@ -228,6 +237,9 @@ def get_alert(aqi):
     elif aqi <= 300: return "Very Unhealthy", "#6a1b9a"
     else: return "Hazardous", "#7e0023"
 
+# ------------------------------------------------------------------------------
+# Feature columns (used as fallback)
+# ------------------------------------------------------------------------------
 FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "aqi_lag_1h", "aqi_lag_24h", "aqi_roll_mean_24h",
                 "aqi_change_rate", "temperature", "humidity", "pm25",
@@ -235,6 +247,9 @@ FEATURE_COLS = ["city_encoded", "hour", "day_of_week", "month",
                 "pm25_raw", "pm10_raw", "no2_raw", "o3_raw"]
 LEGACY_FEATURE_COLS = FEATURE_COLS[:10]
 
+# ------------------------------------------------------------------------------
+# Prediction function (now handles single‑output models gracefully)
+# ------------------------------------------------------------------------------
 def predict(city, model, le, feature_cols=None):
     sb = get_supabase()
     result = sb.table("aqi_gold_features")\
@@ -276,10 +291,22 @@ def predict(city, model, le, feature_cols=None):
     except Exception as e:
         st.error(f"Prediction failed: {e}")
         return None, None, None, None
+
+    # ---- Handle single‑output models ----
+    if not hasattr(preds, '__len__') or len(preds) == 1:
+        # If only one value, repeat it for 3 days (persistence forecast)
+        st.warning("⚠️ Model provides only a 1‑day forecast. We will extend it with the same value for days 2 and 3.")
+        preds = [preds] * 3 if not hasattr(preds, '__len__') else [preds[0]] * 3
+    else:
+        # Ensure we have exactly 3 values (take first 3, or pad with last value)
+        preds = list(preds[:3])
+        while len(preds) < 3:
+            preds.append(preds[-1])
+
     as_of = row["timestamp"]
     base_date = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
     forecast = []
-    for i, aqi_val in enumerate(preds):
+    for i, aqi_val in enumerate(preds[:3]):
         forecast.append({
             "day": i+1,
             "date": (base_date + timedelta(days=i+1)).strftime("%Y-%m-%d"),
@@ -287,6 +314,10 @@ def predict(city, model, le, feature_cols=None):
         })
     return forecast, row["timestamp"], row, X
 
+# ------------------------------------------------------------------------------
+# History (cached)
+# ------------------------------------------------------------------------------
+@st.cache_data(ttl=300)
 def get_history(city):
     sb = get_supabase()
     ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
@@ -294,20 +325,22 @@ def get_history(city):
         .select("timestamp,aqi").eq("city", city)\
         .gte("timestamp", ten_days_ago)\
         .order("timestamp", desc=False).limit(500).execute()
-    
     if not result.data:
         return []
-    
     df = pd.DataFrame(result.data)
     df["timestamp"] = pd.to_datetime(df["timestamp"], format="mixed", utc=True)
     df = df.set_index("timestamp").resample("3h").mean().reset_index()
     df["aqi"] = df["aqi"].rolling(window=3, min_periods=1, center=True).mean().round(0)
+    # Drop any remaining NaNs
+    df = df.dropna(subset=["aqi"])
     return df.to_dict("records")
 
+# ------------------------------------------------------------------------------
+# SHAP background (cached)
+# ------------------------------------------------------------------------------
 @st.cache_data(ttl=300)
 def get_shap_background(city, _le, feature_cols):
     sb = get_supabase()
-    # Fetch latest 200 rows – no filter on lags
     result = sb.table("aqi_gold_features")\
         .select("*").eq("city", city)\
         .order("timestamp", desc=True).limit(200).execute()
@@ -322,12 +355,17 @@ def get_shap_background(city, _le, feature_cols):
     df = df.reindex(columns=feature_cols, fill_value=0)
     return df
 
+# ------------------------------------------------------------------------------
+# Spacer helper
+# ------------------------------------------------------------------------------
 def spacer():
     st.markdown("<div style='margin:30px 0'></div>", unsafe_allow_html=True)
 
-# Header
-st.title("Pearls AQI Predictor")
+# ==============================================================================
+# MAIN APP
+# ==============================================================================
 
+st.title("Pearls AQI Predictor")
 st.markdown("""
 <span style="color:#1f77b4; font-size:1.3rem; font-weight:700;">Know Your Air.</span>
 <span style="color:#1f77b3; font-size:1.3rem; font-weight:700;"> Plan Ahead.</span><br>
@@ -340,8 +378,7 @@ if model is None:
     st.error("Model not loaded!")
     st.stop()
 
-
-# Load background (for SHAP)
+# Load SHAP background and explainer
 background_df = get_shap_background("lahore", le, model_feature_cols)
 shap_explainer = None
 if background_df is not None and len(background_df) >= 1:
@@ -362,7 +399,7 @@ with st.sidebar:
     st.markdown("🟣 201-300: Very Unhealthy")
     st.markdown("🔴 301+: Hazardous")
 
-# Fetch data
+# Fetch forecast
 with st.spinner(f"Fetching forecast for {city}..."):
     forecast, as_of, latest_row, X = predict(city, model, le, model_feature_cols)
     history = get_history(city)
@@ -376,22 +413,15 @@ current_temperature = latest_row.get("temperature")
 
 # Staleness check + Pakistan Time
 PKT = timezone(timedelta(hours=5))
-
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
 age_hours = (datetime.now(timezone.utc) - latest_ts).total_seconds() / 3600
-
 if age_hours > 3:
     st.warning(f"⚠️ Data is {int(age_hours)} hours old — station may not have updated yet.")
 
-# Show date in Pakistan Time
 today_pkt = datetime.now(PKT).strftime("%B %d, %Y  •  %I:%M %p PKT")
+st.markdown(f"<h2>Forecast as of: {today_pkt}</h2>", unsafe_allow_html=True)
 
-st.markdown(
-    f"<h2>Forecast as of: {today_pkt}</h2>",
-    unsafe_allow_html=True
-)
-
-# Current AQI card + Alert banner
+# Current AQI card + Weather
 max_aqi = max(f["aqi"] for f in forecast)
 alert_label, alert_color = get_alert(current_aqi)
 
@@ -413,7 +443,6 @@ with aqi_col:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
     st.markdown(f"""
     <div style="font-size:15px;color:gray;margin:8px 0 16px 7px">
         Main pollutant: PM2.5 ({latest_row.get('pm25_raw', '—')} µg/m³)
@@ -450,7 +479,9 @@ with weather_col:
 
 st.markdown("<div style='margin:20px 0'></div>", unsafe_allow_html=True)
 
-# Section 1 — Forecast cards
+# ------------------------------------------------------------------------------
+# 3‑Day Forecast Cards
+# ------------------------------------------------------------------------------
 st.markdown("---")
 st.markdown(f"<h2>3-Day Forecast for {city.title()}</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
@@ -477,90 +508,109 @@ st.markdown(
 
 spacer()
 
-# Section 2 — Chart
+# ------------------------------------------------------------------------------
+# Chart with robust error handling and debug info
+# ------------------------------------------------------------------------------
 st.markdown("---")
 st.markdown("<h2>Forecast + Recent History</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-fig = go.Figure()
+# Debug expander (only visible to you)
+with st.expander("🔍 Debug info (forecast data)"):
+    st.write("Forecast list:", forecast)
+    st.write("Number of forecast points:", len(forecast))
+    st.write("History rows:", len(history) if history else 0)
 
-# ---------- Historical line ----------
-if history:
-    hist_df = pd.DataFrame(history)
-    hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
-    hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
-    hist_df = hist_df.sort_values("timestamp")
+try:
+    with st.spinner("Loading historical data..."):
+        history = get_history(city)
 
-    # Gap detection
-    hist_df["gap"] = hist_df["timestamp"].diff() > pd.Timedelta(hours=3)
-    x_vals, y_vals = [], []
-    for i, row in hist_df.iterrows():
-        if row["gap"] and len(x_vals) > 0:
-            x_vals.append(None)
-            y_vals.append(None)
-        x_vals.append(row["timestamp"])
-        y_vals.append(row["aqi"])
+    fig = go.Figure()
+
+    # ---------- Historical line ----------
+    if history:
+        hist_df = pd.DataFrame(history)
+        hist_df["timestamp"] = pd.to_datetime(hist_df["timestamp"], format="ISO8601", utc=True)
+        hist_df["timestamp"] = hist_df["timestamp"].dt.tz_convert("Asia/Karachi")
+        hist_df = hist_df.sort_values("timestamp")
+        # Drop any rows with NaN aqi (should already be cleaned, but just in case)
+        hist_df_clean = hist_df.dropna(subset=['aqi']).copy()
+
+        if not hist_df_clean.empty:
+            hist_df_clean["gap"] = hist_df_clean["timestamp"].diff() > pd.Timedelta(hours=3)
+            x_vals, y_vals = [], []
+            for i, row in hist_df_clean.iterrows():
+                if row["gap"] and x_vals:
+                    x_vals.append(None)
+                    y_vals.append(None)
+                x_vals.append(row["timestamp"])
+                y_vals.append(row["aqi"])
+            fig.add_trace(go.Scatter(
+                x=x_vals, y=y_vals,
+                name="Historical AQI",
+                line=dict(color="#1f77b4", width=2),
+                connectgaps=True
+            ))
+
+    # ---------- Forecast line ----------
+    as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
+
+    # Determine last historical point
+    if history and 'hist_df_clean' in locals() and not hist_df_clean.empty:
+        last_hist_ts = hist_df_clean["timestamp"].iloc[-1]
+        last_hist_aqi = hist_df_clean["aqi"].iloc[-1]
+    else:
+        last_hist_ts = as_of_dt
+        last_hist_aqi = int(latest_row.get("aqi", 0))
+
+    forecast_x = [last_hist_ts]
+    forecast_y = [last_hist_aqi]
+
+    for f in forecast:
+        f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
+        forecast_x.append(f_date)
+        forecast_y.append(f["aqi"])
 
     fig.add_trace(go.Scatter(
-        x=x_vals, y=y_vals,
-        name="Historical AQI",
-        line=dict(color="#1f77b4", width=2),
-        connectgaps=True
+        x=forecast_x,
+        y=forecast_y,
+        name="Forecast AQI",
+        line=dict(color="#db3838", dash="solid", width=3),
+        mode="lines+markers",
+        marker=dict(size=9)
     ))
 
-# ---------- Forecast line ----------
-as_of_dt = pd.to_datetime(as_of, utc=True).tz_convert("Asia/Karachi")
+    # Reference lines
+    fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
+    fig.add_hline(y=150, line_dash="dot", line_color="orange", annotation_text="Sensitive")
+    fig.add_hline(y=200, line_dash="dot", line_color="red", annotation_text="Unhealthy")
 
-if history:
-    last_hist_ts = hist_df["timestamp"].iloc[-1]
-    last_hist_aqi = hist_df["aqi"].iloc[-1]
-else:
-    last_hist_ts = as_of_dt
-    last_hist_aqi = int(latest_row.get("aqi", 0))
+    fig.update_layout(
+        title=f"AQI Forecast for {city.title()}",
+        xaxis_title="Date",
+        yaxis_title="AQI",
+        hovermode="x unified",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=420,
+        margin=dict(t=40, b=40)
+    )
 
-forecast_x = [last_hist_ts]
-forecast_y = [last_hist_aqi]
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-for f in forecast:
-    f_date = pd.Timestamp(f["date"]).tz_localize("Asia/Karachi") + pd.Timedelta(hours=12)
-    forecast_x.append(f_date)
-    forecast_y.append(f["aqi"])
-
-fig.add_trace(go.Scatter(
-    x=forecast_x,
-    y=forecast_y,
-    name="Forecast AQI",
-    line=dict(color="#db3838", dash="solid", width=3),
-    mode="lines+markers",
-    marker=dict(size=9)
-))
-
-# Reference lines
-fig.add_hline(y=100, line_dash="dot", line_color="gold", annotation_text="Moderate")
-fig.add_hline(y=150, line_dash="dot", line_color="orange", annotation_text="Sensitive")
-fig.add_hline(y=200, line_dash="dot", line_color="red", annotation_text="Unhealthy")
-
-fig.update_layout(
-    title=f"AQI Forecast for {city.title()}",
-    xaxis_title="Date",
-    yaxis_title="AQI",
-    hovermode="x unified",
-    plot_bgcolor="rgba(0,0,0,0)",
-    height=420,
-    margin=dict(t=40, b=40)
-)
-
-st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+except Exception as e:
+    st.error(f"Chart rendering failed: {e}")
+    st.exception(e)
 
 spacer()
 
-# ========== SHAP EXPLANATIONS ==========
+# ------------------------------------------------------------------------------
+# SHAP Explanations
+# ------------------------------------------------------------------------------
 st.markdown("---")
-st.markdown("<h2>Why this prediction?</h2>", unsafe_allow_html=True)   # <-- changed to h2
+st.markdown("<h2>Why this prediction?</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
-    # If explainer is None but we have X, use X as background (fallback)
     if shap_explainer is None and X is not None:
         shap_explainer = load_shap_explainer(model, X)
 
@@ -608,13 +658,14 @@ except Exception as e:
 
 spacer()
 
-# Section: Global Feature Importance (model-wide)
+# ------------------------------------------------------------------------------
+# Global Feature Importance (fallback)
+# ------------------------------------------------------------------------------
 st.markdown("---")
-st.markdown("<h2>Global Feature Importance</h2>", unsafe_allow_html=True)   # <-- changed to h2
+st.markdown("<h2>Global Feature Importance</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
 try:
-    import numpy as np
     if isinstance(model, MultiOutputRegressor):
         base_estimator = model.estimators_[0]
     else:
@@ -670,6 +721,10 @@ fig2.update_layout(
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
 spacer()
+
+# ------------------------------------------------------------------------------
+# Limitations & footer
+# ------------------------------------------------------------------------------
 st.markdown("---")
 st.markdown("<h2>Model Limitations</h2>", unsafe_allow_html=True)
 st.markdown("""
