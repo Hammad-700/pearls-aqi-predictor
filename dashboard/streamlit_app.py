@@ -333,10 +333,11 @@ def get_history(city):
     # Resample to 3‑hourly mean for smoother line
     df = df.set_index("timestamp")
     df_resampled = df.resample("3h").mean().reset_index()
-    df_resampled["timestamp"] = df_resampled["timestamp"].dt.tz_localize("UTC").dt.tz_convert("Asia/Karachi")
+    # The "timestamp" column is already UTC‑aware, so just convert to PKT
+    df_resampled["timestamp"] = df_resampled["timestamp"].dt.tz_convert("Asia/Karachi")
     df_resampled["aqi"] = df_resampled["aqi"].round(0)
     
-    # Get the absolute latest raw row to ensure the endpoint is correct
+    # Get the absolute latest raw row to force the endpoint
     latest_raw = sb.table("aqi_gold_features")\
         .select("timestamp,aqi").eq("city", city)\
         .order("timestamp", desc=True).limit(1).execute()
@@ -345,13 +346,10 @@ def get_history(city):
         latest_aqi = latest_raw.data[0]["aqi"]
         
         if not df_resampled.empty:
-            # If the latest raw point is newer than the last resampled point, append it.
-            # Otherwise, replace the last resampled point.
             if latest_ts > df_resampled["timestamp"].iloc[-1]:
                 new_row = pd.DataFrame({"timestamp": [latest_ts], "aqi": [latest_aqi]})
                 df_resampled = pd.concat([df_resampled, new_row], ignore_index=True)
             else:
-                # Replace the last point with the raw value (ensures match)
                 df_resampled.iloc[-1, df_resampled.columns.get_loc("timestamp")] = latest_ts
                 df_resampled.iloc[-1, df_resampled.columns.get_loc("aqi")] = latest_aqi
     
