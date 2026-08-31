@@ -436,7 +436,7 @@ current_temperature = latest_row.get("temperature")
 PKT = timezone(timedelta(hours=5))
 latest_ts = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
 age_hours = (datetime.now(timezone.utc) - latest_ts).total_seconds() / 3600
-if age_hours > 3:
+if age_hours > 5:
     st.warning(f"⚠️ Data is {int(age_hours)} hours old — station may not have updated yet.")
 
 today_pkt = datetime.now(PKT).strftime("%B %d, %Y  •  %I:%M %p PKT")
