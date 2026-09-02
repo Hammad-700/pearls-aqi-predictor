@@ -136,6 +136,7 @@ def extract_station(bronze: Dict[str, Any], silver: Dict[str, Any]) -> Dict[str,
 # ---------- Bronze ----------
 def save_bronze(bronze: Dict[str, Any]) -> None:
     rounded_ts = normalize_and_round_timestamp(bronze["timestamp"])
+    print(f"[DEBUG] Saving with timestamp: {rounded_ts}")
     base = {
         "city": bronze["city"],
         "timestamp": rounded_ts,                     # rounded to hour

@@ -162,7 +162,8 @@ def fetch_aqi(city: str) -> dict:
         print(f"[WARN] Weather fetch failed: {e}")
         weather = {}
 
-    timestamp = best["ts"].isoformat()
+    # Use current UTC time, not the station's stale timestamp
+    timestamp = datetime.now(timezone.utc).isoformat()
     raw = best["data"]["data"].copy()
     raw["aqi"] = avg_aqi
 
