@@ -616,13 +616,6 @@ st.markdown("---")
 st.markdown("<h2>Why this prediction?</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
 
-# Short explanation for SHAP
-st.markdown("""
-**🔴 Red = pushes AQI up**  
-**🔵 Blue = pushes AQI down**    
-Values are in AQI points. The sum of these contributions + average prediction = final forecast.
-""", unsafe_allow_html=True)
-
 try:
     if shap_explainer is None and X is not None:
         shap_explainer = load_shap_explainer(model, X)
@@ -663,6 +656,9 @@ try:
             plot_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
+
+        # --- Moved explanatory text to BOTTOM of chart ---
+        st.caption("**🔴 Red = pushes AQI up**   **🔵 Blue = pushes AQI down**   Values are in AQI points. The sum of these contributions + average prediction = final forecast.")
     else:
         st.info("No SHAP explainer available. Showing global feature importance below.")
 except Exception as e:
@@ -677,12 +673,6 @@ spacer()
 st.markdown("---")
 st.markdown("<h2>Global Feature Importance</h2>", unsafe_allow_html=True)
 st.markdown("<div style='margin:16px 0'></div>", unsafe_allow_html=True)
-
-# Short explanation for Global Importance
-st.markdown("""
-**Longer bars = more important features overall.**  
-This shows which factors the model relies on most across all predictions.
-""", unsafe_allow_html=True)
 
 try:
     if isinstance(model, MultiOutputRegressor):
@@ -738,6 +728,9 @@ fig2.update_layout(
     margin=dict(t=40, b=40)
 )
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+
+# --- Moved explanatory text to BOTTOM of chart ---
+st.caption("**Longer bars = more important features overall.** This shows which factors the model relies on most across all predictions.")
 
 spacer()
 
