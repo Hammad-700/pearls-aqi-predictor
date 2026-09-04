@@ -657,9 +657,13 @@ try:
         )
         st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
 
-        # --- Moved explanatory text to BOTTOM of chart ---
-        st.caption("**🔴 Red = pushes AQI up**   **🔵 Blue = pushes AQI down** " \
-        "Values are in AQI points. The sum of these contributions + average prediction = final forecast.")
+        # --- UPDATED: Styled explanatory text for SHAP ---
+        st.markdown("""
+        <div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-top:10px;">
+        🔴 Red = pushes AQI up &nbsp;&nbsp; 🔵 Blue = pushes AQI down <br>
+        Values are in AQI points. The sum of these contributions + average prediction = final forecast.
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.info("No SHAP explainer available. Showing global feature importance below.")
 except Exception as e:
@@ -730,9 +734,13 @@ fig2.update_layout(
 )
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
-# --- Moved explanatory text to BOTTOM of chart ---
-st.caption("**Longer bars = more important features overall.** " \
-"This shows which factors the model relies on most across all predictions.")
+# --- UPDATED: Styled explanatory text for Global Importance ---
+st.markdown("""
+<div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-top:10px;">
+Longer bars = more important features overall. <br>
+This shows which factors the model relies on most across all predictions.
+</div>
+""", unsafe_allow_html=True)
 
 spacer()
 
