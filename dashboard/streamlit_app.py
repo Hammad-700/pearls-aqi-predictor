@@ -657,9 +657,14 @@ try:
         )
         st.plotly_chart(fig_shap, use_container_width=True, config={"displayModeBar": False})
 
-        # --- UPDATED: Styled explanatory text for SHAP with black text ---
+        # --- UPDATED: Theme-aware explanatory text ---
         st.markdown("""
-        <div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-top:10px; color:#000000;">
+        <div style="background-color: var(--st-color-background-secondary); 
+                    padding: 10px; 
+                    border-radius: 5px; 
+                    margin-top: 10px; 
+                    color: var(--st-color-text);
+                    border: 1px solid var(--st-color-border);">
         🔴 Red = pushes AQI up &nbsp;&nbsp; 🔵 Blue = pushes AQI down <br>
         Values are in AQI points. The sum of these contributions + average prediction = final forecast.
         </div>
@@ -734,9 +739,14 @@ fig2.update_layout(
 )
 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
-# --- UPDATED: Styled explanatory text for Global Importance with black text ---
+# --- UPDATED: Theme-aware explanatory text ---
 st.markdown("""
-<div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-top:10px; color:#000000;">
+<div style="background-color: var(--st-color-background-secondary); 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-top: 10px; 
+            color: var(--st-color-text);
+            border: 1px solid var(--st-color-border);">
 Longer bars = more important features overall. <br>
 This shows which factors the model relies on most across all predictions.
 </div>
