@@ -581,7 +581,7 @@ try:
         x=forecast_x,
         y=forecast_y,
         name="Forecast AQI",
-        line=dict(color="#db3838", dash="solid", width=3),
+        line=dict(color="#db3838", dash="solid", width=3, shape="spline"),
         mode="lines+markers",
         marker=dict(size=9)
     ))
