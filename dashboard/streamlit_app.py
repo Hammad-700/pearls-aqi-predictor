@@ -554,7 +554,7 @@ try:
                 x=hist_df_clean["timestamp"],
                 y=hist_df_clean["aqi"],
                 name="Historical AQI",
-                line=dict(color="#1f77b4", width=2),
+                line=dict(color="#1f77b4", width=2, shape="spline"),
                 connectgaps=True
             ))
 
