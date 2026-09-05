@@ -167,7 +167,6 @@ AQI forecasts can influence health decisions. The system is **informational only
 | Open-Meteo | ✅ Live |
 
 ![alt text](image.png)
-
 ## 18. Conclusion
 Pearls AQI Predictor demonstrates a complete, automated ML pipeline for 3-day Lahore AQI forecasting. The project prioritizes **simplicity, cost-effectiveness, automation, and explainability** using Supabase, GitHub Actions, tree-based models, SHAP, Streamlit, and Flask.
 
